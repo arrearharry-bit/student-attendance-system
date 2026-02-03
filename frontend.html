@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        
+        :root {
+            --primary-red: #dc2626;
+            --dark-red: #991b1b;
+            --black: #0a0a0a;
+            --dark-gray: #1a1a1a;
+            --light-gray: #2a2a2a;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #2a1a1a 100%);
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(26, 26, 26, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            box-shadow: 0 8px 32px rgba(220, 38, 38, 0.2);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4);
+        }
+        
+        .input-field {
+            background: rgba(42, 42, 42, 0.8);
+            border: 1px solid rgba(220, 38, 38, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .input-field:focus {
+            border-color: #dc2626;
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.3);
+        }
+        
+        .captcha-box {
+            background: linear-gradient(45deg, #1a1a1a, #2a2a2a);
+            user-select: none;
+            letter-spacing: 8px;
+            font-weight: bold;
+        }
+        
+        .sidebar-link {
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-link:hover, .sidebar-link.active {
+            background: linear-gradient(90deg, rgba(220, 38, 38, 0.3), transparent);
+            border-left: 4px solid #dc2626;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.9), rgba(26, 26, 26, 0.9));
+            border: 1px solid rgba(220, 38, 38, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(220, 38, 38, 0.5);
+        }
+        
+        .attendance-present {
+            background: linear-gradient(135deg, #166534, #14532d);
+        }
+        
+        .attendance-absent {
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-red {
+            animation: pulseRed 2s infinite;
+        }
+        
+        @keyframes pulseRed {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #dc2626;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <!-- Login Page -->
+    <div id="loginPage" class="min-h-screen flex items-center justify-center p-4">
+        <div class="glass-card rounded-2xl p-8 w-full max-w-md fade-in">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center mx-auto mb-4 pulse-red">
+                    <i class="fas fa-graduation-cap text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white">Attendance Management</h1>
+                <p class="text-gray-400 mt-2">Login to continue</p>
+            </div>
+            
+            <!-- Role Toggle -->
+            <div class="flex bg-gray-800 rounded-lg p-1 mb-6">
+                <button onclick="switchRole('student')" id="studentTab" class="flex-1 py-2 rounded-lg bg-red-600 text-white font-medium transition-all">
+                    <i class="fas fa-user-graduate mr-2"></i>Student
+                </button>
+                <button onclick="switchRole('ADMIN')" id="ADMINTab" class="flex-1 py-2 rounded-lg text-gray-400 font-medium transition-all">
+                    <i class="fas fa-user-tie mr-2"></i>ADMIN
+                </button>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-4">
+                    <label class="block text-gray-300 mb-2 text-sm">
+                        <i class="fas fa-id-card mr-2 text-red-500"></i><span id="idLabel">Student ID</span>
+                    </label>
+                    <input type="text" id="userId" class="input-field w-full px-4 py-3 rounded-lg text-white outline-none" placeholder="Enter your ID" required>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-300 mb-2 text-sm">
+                        <i class="fas fa-lock mr-2 text-red-500"></i>Password
+                    </label>
+                    <div class="relative">
+                        <input type="password" id="password" class="input-field w-full px-4 py-3 rounded-lg text-white outline-none pr-12" placeholder="Enter password" required>
+                        <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-500">
+                            <i class="fas fa-eye" id="eyeIcon"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- CAPTCHA -->
+                <div class="mb-6">
+                    <label class="block text-gray-300 mb-2 text-sm">
+                        <i class="fas fa-shield-alt mr-2 text-red-500"></i>Verify CAPTCHA
+                    </label>
+                    <div class="flex gap-3 mb-3">
+                        <div class="captcha-box flex-1 py-3 rounded-lg text-center text-xl text-red-500" id="captchaDisplay"></div>
+                        <button type="button" onclick="generateCaptcha()" class="px-4 py-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <input type="text" id="captchaInput" class="input-field w-full px-4 py-3 rounded-lg text-white outline-none" placeholder="Enter CAPTCHA" required>
+                </div>
+                
+                <button type="submit" class="btn-primary w-full py-3 rounded-lg font-semibold text-white">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Login
+                </button>
+            </form>
+            
+            <div id="errorMsg" class="mt-4 text-center text-red-400 hidden"></div>
+            
+            <div class="mt-6 p-4 bg-gray-800/50 rounded-lg">
+                <p class="text-xs text-gray-400 text-center mb-2">Demo Credentials:</p>
+                <p class="text-xs text-gray-500 text-center">Student: STU001 / pass123</p>
+                <p class="text-xs text-gray-500 text-center">ADMIN: ADMIN001 / admin123</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Student Dashboard -->
+    <div id="studentDashboard" class="hidden min-h-screen">
+        <div class="flex">
+            <!-- Sidebar -->
+            <div class="w-64 bg-gray-900 min-h-screen fixed left-0 top-0 border-r border-red-900/30">
+                <div class="p-6 border-b border-red-900/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-graduate text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold" id="studentName">Student Name</p>
+                            <p class="text-xs text-gray-400" id="studentId">ID: STU001</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <nav class="p-4">
+                    <button onclick="showStudentSection('overview')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3 active" id="nav-overview">
+                        <i class="fas fa-home w-5"></i> Overview
+                    </button>
+                    <button onclick="showStudentSection('attendance')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3" id="nav-attendance">
+                        <i class="fas fa-calendar-check w-5"></i> Mark Attendance
+                    </button>
+                    <button onclick="showStudentSection('history')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3" id="nav-history">
+                        <i class="fas fa-history w-5"></i> Attendance History
+                    </button>
+                    <button onclick="showStudentSection('profile')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3" id="nav-profile">
+                        <i class="fas fa-user w-5"></i> My Profile
+                    </button>
+                </nav>
+                
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-red-900/30">
+                    <button onclick="logout()" class="w-full px-4 py-3 bg-red-600/20 text-red-500 rounded-lg hover:bg-red-600/30 transition-colors flex items-center justify-center gap-2">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="ml-64 flex-1 p-8">
+                <!-- Overview Section -->
+                <div id="section-overview" class="fade-in">
+                    <h2 class="text-2xl font-bold mb-6">Welcome Back!</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Total Classes</p>
+                                    <p class="text-3xl font-bold text-white" id="totalClasses">0</p>
+                                </div>
+                                <div class="w-14 h-14 bg-red-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-book text-red-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Present Days</p>
+                                    <p class="text-3xl font-bold text-green-500" id="presentDays">0</p>
+                                </div>
+                                <div class="w-14 h-14 bg-green-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-check text-green-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Attendance %</p>
+                                    <p class="text-3xl font-bold text-red-500" id="attendancePercent">0%</p>
+                                </div>
+                                <div class="w-14 h-14 bg-red-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-chart-pie text-red-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Recent Attendance</h3>
+                        <div id="recentAttendance" class="space-y-3">
+                            <p class="text-gray-400">No attendance records yet.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Mark Attendance Section -->
+                <div id="section-attendance" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold mb-6">Mark Today's Attendance</h2>
+                    
+                    <div class="glass-card rounded-xl p-8 max-w-lg">
+                        <div class="text-center mb-6">
+                            <div class="w-24 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-calendar-day text-4xl"></i>
+                            </div>
+                            <p class="text-2xl font-bold" id="currentDate"></p>
+                            <p class="text-gray-400" id="currentTime"></p>
+                        </div>
+                        
+                        <div id="attendanceStatus" class="mb-6 p-4 rounded-lg bg-gray-800 text-center">
+                            <p class="text-gray-400">Checking attendance status...</p>
+                        </div>
+                        
+                        <button onclick="markAttendance()" id="markAttendanceBtn" class="btn-primary w-full py-4 rounded-lg font-semibold text-lg">
+                            <i class="fas fa-check-circle mr-2"></i>Mark Present
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- History Section -->
+                <div id="section-history" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold mb-6">Attendance History</h2>
+                    
+                    <div class="glass-card rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <div class="flex gap-4">
+                                <select id="monthFilter" onchange="filterHistory()" class="input-field px-4 py-2 rounded-lg text-white outline-none">
+                                    <option value="">All Months</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-700">
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Date</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Day</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Status</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTable">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Profile Section -->
+                <div id="section-profile" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold mb-6">My Profile</h2>
+                    
+                    <div class="glass-card rounded-xl p-8 max-w-2xl">
+                        <div class="flex items-center gap-6 mb-8 pb-8 border-b border-gray-700">
+                            <div class="w-24 h-24 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-4xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-bold" id="profileName">Student Name</h3>
+                                <p class="text-gray-400" id="profileId">Student ID: STU001</p>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-gray-400 text-sm">Email</label>
+                                <p class="text-white font-medium" id="profileEmail">student@example.com</p>
+                            </div>
+                            <div>
+                                <label class="text-gray-400 text-sm">Phone</label>
+                                <p class="text-white font-medium" id="profilePhone">+1234567890</p>
+                            </div>
+                            <div>
+                                <label class="text-gray-400 text-sm">Department</label>
+                                <p class="text-white font-medium" id="profileDept">Computer Science</p>
+                            </div>
+                            <div>
+                                <label class="text-gray-400 text-sm">Semester</label>
+                                <p class="text-white font-medium" id="profileSem">5th Semester</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ADMIN Dashboard -->
+    <div id="ADMINDashboard" class="hidden min-h-screen">
+        <div class="flex">
+            <!-- Sidebar -->
+            <div class="w-64 bg-gray-900 min-h-screen fixed left-0 top-0 border-r border-red-900/30">
+                <div class="p-6 border-b border-red-900/30">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-gradient-to-br from-red-600 to-red-800 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user-tie text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold" id="ADMINName">ADMIN Name</p>
+                            <p class="text-xs text-gray-400" id="ADMINId">ID: ADMIN001</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <nav class="p-4">
+                    <button onclick="showADMINSection('dashboard')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3 active" id="ADMIN-nav-dashboard">
+                        <i class="fas fa-tachometer-alt w-5"></i> Dashboard
+                    </button>
+                    <button onclick="showADMINSection('students')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3" id="ADMIN-nav-students">
+                        <i class="fas fa-users w-5"></i> All Students
+                    </button>
+                    <button onclick="showADMINSection('editAttendance')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3" id="ADMIN-nav-editAttendance">
+                        <i class="fas fa-edit w-5"></i> Edit Attendance
+                    </button>
+                    <button onclick="showADMINSection('reports')" class="sidebar-link w-full text-left px-4 py-3 rounded-lg mb-2 flex items-center gap-3" id="ADMIN-nav-reports">
+                        <i class="fas fa-chart-bar w-5"></i> Reports
+                    </button>
+                </nav>
+                
+                <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-red-900/30">
+                    <button onclick="logout()" class="w-full px-4 py-3 bg-red-600/20 text-red-500 rounded-lg hover:bg-red-600/30 transition-colors flex items-center justify-center gap-2">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="ml-64 flex-1 p-8">
+                <!-- ADMIN Dashboard Section -->
+                <div id="ADMIN-section-dashboard" class="fade-in">
+                    <h2 class="text-2xl font-bold mb-6">ADMIN Dashboard</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Total Students</p>
+                                    <p class="text-3xl font-bold text-white" id="totalStudents">0</p>
+                                </div>
+                                <div class="w-14 h-14 bg-blue-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-users text-blue-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Present Today</p>
+                                    <p class="text-3xl font-bold text-green-500" id="presentToday">0</p>
+                                </div>
+                                <div class="w-14 h-14 bg-green-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-check text-green-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Absent Today</p>
+                                    <p class="text-3xl font-bold text-red-500" id="absentToday">0</p>
+                                </div>
+                                <div class="w-14 h-14 bg-red-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-times text-red-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card p-6 rounded-xl">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-gray-400 text-sm">Avg Attendance</p>
+                                    <p class="text-3xl font-bold text-yellow-500" id="avgAttendance">0%</p>
+                                </div>
+                                <div class="w-14 h-14 bg-yellow-600/20 rounded-full flex items-center justify-center">
+                                    <i class="fas fa-chart-line text-yellow-500 text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Today's Attendance Overview</h3>
+                        <div id="todayOverview" class="space-y-3">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Students List Section -->
+                <div id="ADMIN-section-students" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold mb-6">All Students</h2>
+                    
+                    <div class="glass-card rounded-xl p-6">
+                        <div class="mb-4">
+                            <input type="text" id="searchStudent" onkeyup="searchStudents()" class="input-field w-full md:w-80 px-4 py-3 rounded-lg text-white outline-none" placeholder="Search by name or ID...">
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="border-b border-gray-700">
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Student ID</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Name</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Department</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Attendance %</th>
+                                        <th class="text-left py-3 px-4 text-gray-400 font-medium">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="studentsTable">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Edit Attendance Section -->
+                <div id="ADMIN-section-editAttendance" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold mb-6">Edit Attendance</h2>
+                    
+                    <div class="glass-card rounded-xl p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            <div>
+                                <label class="block text-gray-300 mb-2 text-sm">Select Student</label>
+                                <select id="editStudentSelect" onchange="loadStudentAttendance()" class="input-field w-full px-4 py-3 rounded-lg text-white outline-none">
+                                    <option value="">Select a student</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 mb-2 text-sm">Select Date</label>
+                                <input type="date" id="editDate" class="input-field w-full px-4 py-3 rounded-lg text-white outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 mb-2 text-sm">Status</label>
+                                <select id="editStatus" class="input-field w-full px-4 py-3 rounded-lg text-white outline-none">
+                                    <option value="present">Present</option>
+                                    <option value="absent">Absent</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="updateAttendance()" class="btn-primary px-6 py-3 rounded-lg font-semibold">
+                            <i class="fas fa-save mr-2"></i>Update Attendance
+                        </button>
+                    </div>
+                    
+                    <div class="glass-card rounded-xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Student Attendance Records</h3>
+                        <div id="editAttendanceTable" class="overflow-x-auto">
+                            <p class="text-gray-400">Select a student to view their attendance records.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Reports Section -->
+                <div id="ADMIN-section-reports" class="hidden fade-in">
+                    <h2 class="text-2xl font-bold mb-6">Attendance Reports</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="glass-card rounded-xl p-6">
+                            <h3 class="text-lg font-semibold mb-4">Attendance Summary by Student</h3>
+                            <div id="studentSummary" class="space-y-4">
+                            </div>
+                        </div>
+                        
+                        <div class="glass-card rounded-xl p-6">
+                            <h3 class="text-lg font-semibold mb-4">Low Attendance Alert (&lt;75%)</h3>
+                            <div id="lowAttendanceAlert" class="space-y-3">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed top-4 right-4 transform translate-x-full transition-transform duration-300 z-50">
+        <div class="bg-gray-800 border border-red-600 rounded-lg p-4 shadow-lg flex items-center gap-3">
+            <i class="fas fa-check-circle text-green-500" id="toastIcon"></i>
+            <span id="toastMessage">Success!</span>
+        </div>
+    </div>
+
+    <script>
+        
+        function initDatabase() {
+            if (!localStorage.getItem('students')) {
+                const students = [
+                    { id: 'STU001', password: 'pass123', name: 'John Doe', email: 'john@example.com', phone: '+1234567890', department: 'Computer Science', semester: '5th Semester' },
+                    { id: 'STU002', password: 'pass123', name: 'Jane Smith', email: 'jane@example.com', phone: '+1234567891', department: 'Electronics', semester: '4th Semester' },
+                    { id: 'STU003', password: 'pass123', name: 'Mike Johnson', email: 'mike@example.com', phone: '+1234567892', department: 'Mechanical', semester: '6th Semester' },
+                    { id: 'STU004', password: 'pass123', name: 'Emily Brown', email: 'emily@example.com', phone: '+1234567893', department: 'Computer Science', semester: '5th Semester' },
+                    { id: 'STU005', password: 'pass123', name: 'David Wilson', email: 'david@example.com', phone: '+1234567894', department: 'Civil', semester: '3rd Semester' }
+                ];
+                localStorage.setItem('students', JSON.stringify(students));
+            }
+            
+            if (!localStorage.getItem('ADMIN')) {
+                const ADMIN = [
+                    { id: 'ADMIN001', password: 'admin123', name: 'Dr. Robert Anderson', email: 'robert@example.com', department: 'Computer Science' }
+                ];
+                localStorage.setItem('ADMIN', JSON.stringify(ADMIN));
+            }
+            
+            if (!localStorage.getItem('attendance')) {
+                localStorage.setItem('attendance', JSON.stringify([]));
+            }
+        }
+        
+        // ==================== CAPTCHA ====================
+        let captchaValue = '';
+        
+        function generateCaptcha() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+            captchaValue = '';
+            for (let i = 0; i < 6; i++) {
+                captchaValue += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            document.getElementById('captchaDisplay').textContent = captchaValue;
+        }
+        
+        // ==================== LOGIN FUNCTIONS ====================
+        let currentRole = 'student';
+        let currentUser = null;
+        
+        function switchRole(role) {
+            currentRole = role;
+            const studentTab = document.getElementById('studentTab');
+            const ADMINTab = document.getElementById('ADMINTab');
+            const idLabel = document.getElementById('idLabel');
+            
+            if (role === 'student') {
+                studentTab.classList.add('bg-red-600', 'text-white');
+                studentTab.classList.remove('text-gray-400');
+                ADMINTab.classList.remove('bg-red-600', 'text-white');
+                ADMINTab.classList.add('text-gray-400');
+                idLabel.textContent = 'Student ID';
+            } else {
+                ADMINTab.classList.add('bg-red-600', 'text-white');
+                ADMINTab.classList.remove('text-gray-400');
+                studentTab.classList.remove('bg-red-600', 'text-white');
+                studentTab.classList.add('text-gray-400');
+                idLabel.textContent = 'ADMIN ID';
+            }
+        }
+        
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                pwd.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+        
+        function handleLogin(e) {
+            e.preventDefault();
+            const userId = document.getElementById('userId').value.trim();
+            const password = document.getElementById('password').value;
+            const captchaInput = document.getElementById('captchaInput').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            // Verify CAPTCHA
+            if (captchaInput !== captchaValue) {
+                showError('Invalid CAPTCHA. Please try again.');
+                generateCaptcha();
+                return;
+            }
+            
+            if (currentRole === 'student') {
+                const students = JSON.parse(localStorage.getItem('students'));
+                const student = students.find(s => s.id === userId && s.password === password);
+                
+                if (student) {
+                    currentUser = student;
+                    showStudentDashboard();
+                } else {
+                    showError('Invalid Student ID or Password');
+                    generateCaptcha();
+                }
+            } else {
+                const ADMINList = JSON.parse(localStorage.getItem('ADMIN'));
+                const ADMINMember = ADMINList.find(s => s.id === userId && s.password === password);
+                
+                if (ADMINMember) {
+                    currentUser = ADMINMember;
+                    showADMINDashboard();
+                } else {
+                    showError('Invalid ADMIN ID or Password');
+                    generateCaptcha();
+                }
+            }
+        }
+        
+        function showError(msg) {
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = msg;
+            errorMsg.classList.remove('hidden');
+            setTimeout(() => errorMsg.classList.add('hidden'), 3000);
+        }
+        
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('studentDashboard').classList.add('hidden');
+            document.getElementById('ADMINDashboard').classList.add('hidden');
+            document.getElementById('loginForm').reset();
+            generateCaptcha();
+        }
+        
+        // ==================== STUDENT DASHBOARD ====================
+        function showStudentDashboard() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('studentDashboard').classList.remove('hidden');
+            
+            document.getElementById('studentName').textContent = currentUser.name;
+            document.getElementById('studentId').textContent = 'ID: ' + currentUser.id;
+            
+            loadStudentStats();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            checkTodayAttendance();
+        }
+        
+        function showStudentSection(section) {
+            ['overview', 'attendance', 'history', 'profile'].forEach(s => {
+                document.getElementById('section-' + s).classList.add('hidden');
+                document.getElementById('nav-' + s).classList.remove('active');
+            });
+            
+            document.getElementById('section-' + section).classList.remove('hidden');
+            document.getElementById('nav-' + section).classList.add('active');
+            
+            if (section === 'history') loadHistory();
+            if (section === 'profile') loadProfile();
+            if (section === 'overview') loadStudentStats();
+        }
+        
+        function loadStudentStats() {
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const myAttendance = attendance.filter(a => a.studentId === currentUser.id);
+            
+            const total = myAttendance.length;
+            const present = myAttendance.filter(a => a.status === 'present').length;
+            const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+            
+            document.getElementById('totalClasses').textContent = total;
+            document.getElementById('presentDays').textContent = present;
+            document.getElementById('attendancePercent').textContent = percent + '%';
+            
+            // Recent attendance
+            const recent = myAttendance.slice(-5).reverse();
+            const recentDiv = document.getElementById('recentAttendance');
+            
+            if (recent.length === 0) {
+                recentDiv.innerHTML = '<p class="text-gray-400">No attendance records yet.</p>';
+            } else {
+                recentDiv.innerHTML = recent.map(a => `
+                    <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+                        <div>
+                            <p class="font-medium">${formatDate(a.date)}</p>
+                            <p class="text-sm text-gray-400">${a.time || 'N/A'}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-sm ${a.status === 'present' ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'}">
+                            ${a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                        </span>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        
+        function checkTodayAttendance() {
+            const today = new Date().toISOString().split('T')[0];
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const todayRecord = attendance.find(a => a.studentId === currentUser.id && a.date === today);
+            
+            const statusDiv = document.getElementById('attendanceStatus');
+            const btn = document.getElementById('markAttendanceBtn');
+            
+            if (todayRecord) {
+                statusDiv.innerHTML = `
+                    <div class="${todayRecord.status === 'present' ? 'text-green-500' : 'text-red-500'}">
+                        <i class="fas ${todayRecord.status === 'present' ? 'fa-check-circle' : 'fa-times-circle'} text-2xl mb-2"></i>
+                        <p class="font-medium">You are marked as ${todayRecord.status.toUpperCase()}</p>
+                        <p class="text-sm text-gray-400">Time: ${todayRecord.time}</p>
+                    </div>
+                `;
+                btn.disabled = true;
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="text-yellow-500">
+                        <i class="fas fa-exclamation-circle text-2xl mb-2"></i>
+                        <p class="font-medium">Attendance not marked yet</p>
+                    </div>
+                `;
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+        
+        function markAttendance() {
+            const today = new Date().toISOString().split('T')[0];
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            attendance.push({
+                studentId: currentUser.id,
+                date: today,
+                time: time,
+                status: 'present'
+            });
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+            
+            checkTodayAttendance();
+            loadStudentStats();
+            showToast('Attendance marked successfully!', 'success');
+        }
+        
+        function loadHistory() {
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const myAttendance = attendance.filter(a => a.studentId === currentUser.id);
+            
+            // Populate month filter
+            const months = [...new Set(myAttendance.map(a => a.date.substring(0, 7)))];
+            const monthFilter = document.getElementById('monthFilter');
+            monthFilter.innerHTML = '<option value="">All Months</option>' + 
+                months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join('');
+            
+            displayHistory(myAttendance);
+        }
+        
+        function filterHistory() {
+            const monthFilter = document.getElementById('monthFilter').value;
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            let myAttendance = attendance.filter(a => a.studentId === currentUser.id);
+            
+            if (monthFilter) {
+                myAttendance = myAttendance.filter(a => a.date.startsWith(monthFilter));
+            }
+            
+            displayHistory(myAttendance);
+        }
+        
+        function displayHistory(records) {
+            const tbody = document.getElementById('historyTable');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">No records found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = records.reverse().map(r => `
+                <tr class="border-b border-gray-700/50 hover:bg-gray-800/50">
+                    <td class="py-3 px-4">${formatDate(r.date)}</td>
+                    <td class="py-3 px-4">${getDayName(r.date)}</td>
+                    <td class="py-3 px-4">
+                        <span class="px-3 py-1 rounded-full text-sm ${r.status === 'present' ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'}">
+                            ${r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-gray-400">${r.time || 'N/A'}</td>
+                </tr>
+            `).join('');
+        }
+        
+        function loadProfile() {
+            document.getElementById('profileName').textContent = currentUser.name;
+            document.getElementById('profileId').textContent = 'Student ID: ' + currentUser.id;
+            document.getElementById('profileEmail').textContent = currentUser.email;
+            document.getElementById('profilePhone').textContent = currentUser.phone;
+            document.getElementById('profileDept').textContent = currentUser.department;
+            document.getElementById('profileSem').textContent = currentUser.semester;
+        }
+        
+        // ==================== ADMIN DASHBOARD ====================
+        function showADMINDashboard() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('ADMINDashboard').classList.remove('hidden');
+            
+            document.getElementById('ADMINName').textContent = currentUser.name;
+            document.getElementById('ADMINId').textContent = 'ID: ' + currentUser.id;
+            
+            loadADMINDashboard();
+            populateStudentSelect();
+        }
+        
+        function showADMINSection(section) {
+            ['dashboard', 'students', 'editAttendance', 'reports'].forEach(s => {
+                document.getElementById('ADMIN-section-' + s).classList.add('hidden');
+                document.getElementById('ADMIN-nav-' + s).classList.remove('active');
+            });
+            
+            document.getElementById('ADMIN-section-' + section).classList.remove('hidden');
+            document.getElementById('ADMIN-nav-' + section).classList.add('active');
+            
+            if (section === 'dashboard') loadADMINDashboard();
+            if (section === 'students') loadStudentsList();
+            if (section === 'reports') loadReports();
+        }
+        
+        function loadADMINDashboard() {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const today = new Date().toISOString().split('T')[0];
+            
+            const todayAttendance = attendance.filter(a => a.date === today);
+            const presentToday = todayAttendance.filter(a => a.status === 'present').length;
+            
+            document.getElementById('totalStudents').textContent = students.length;
+            document.getElementById('presentToday').textContent = presentToday;
+            document.getElementById('absentToday').textContent = students.length - presentToday;
+            
+            // Calculate average attendance
+            let totalPercent = 0;
+            students.forEach(s => {
+                const studentAttendance = attendance.filter(a => a.studentId === s.id);
+                const present = studentAttendance.filter(a => a.status === 'present').length;
+                const percent = studentAttendance.length > 0 ? (present / studentAttendance.length) * 100 : 0;
+                totalPercent += percent;
+            });
+            const avgPercent = students.length > 0 ? Math.round(totalPercent / students.length) : 0;
+            document.getElementById('avgAttendance').textContent = avgPercent + '%';
+            
+            // Today's overview
+            const overviewDiv = document.getElementById('todayOverview');
+            overviewDiv.innerHTML = students.map(s => {
+                const record = todayAttendance.find(a => a.studentId === s.id);
+                return `
+                    <div class="flex justify-between items-center p-3 bg-gray-800 rounded-lg">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-red-600/20 rounded-full flex items-center justify-center">
+                                <i class="fas fa-user text-red-500"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">${s.name}</p>
+                                <p class="text-sm text-gray-400">${s.id}</p>
+                            </div>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-sm ${record && record.status === 'present' ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'}">
+                            ${record ? (record.status === 'present' ? 'Present' : 'Absent') : 'Not Marked'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function loadStudentsList() {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            
+            const tbody = document.getElementById('studentsTable');
+            tbody.innerHTML = students.map(s => {
+                const studentAttendance = attendance.filter(a => a.studentId === s.id);
+                const present = studentAttendance.filter(a => a.status === 'present').length;
+                const percent = studentAttendance.length > 0 ? Math.round((present / studentAttendance.length) * 100) : 0;
+                
+                return `
+                    <tr class="border-b border-gray-700/50 hover:bg-gray-800/50">
+                        <td class="py-3 px-4 font-medium">${s.id}</td>
+                        <td class="py-3 px-4">${s.name}</td>
+                        <td class="py-3 px-4 text-gray-400">${s.department}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-24 bg-gray-700 rounded-full h-2">
+                                    <div class="h-2 rounded-full ${percent >= 75 ? 'bg-green-500' : percent >= 50 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${percent}%"></div>
+                                </div>
+                                <span class="text-sm">${percent}%</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="viewStudentDetails('${s.id}')" class="px-3 py-1 bg-red-600/20 text-red-500 rounded hover:bg-red-600/30 transition-colors">
+                                <i class="fas fa-eye mr-1"></i>View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function searchStudents() {
+            const query = document.getElementById('searchStudent').value.toLowerCase();
+            const students = JSON.parse(localStorage.getItem('students'));
+            const filtered = students.filter(s => 
+                s.name.toLowerCase().includes(query) || s.id.toLowerCase().includes(query)
+            );
+            
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const tbody = document.getElementById('studentsTable');
+            
+            tbody.innerHTML = filtered.map(s => {
+                const studentAttendance = attendance.filter(a => a.studentId === s.id);
+                const present = studentAttendance.filter(a => a.status === 'present').length;
+                const percent = studentAttendance.length > 0 ? Math.round((present / studentAttendance.length) * 100) : 0;
+                
+                return `
+                    <tr class="border-b border-gray-700/50 hover:bg-gray-800/50">
+                        <td class="py-3 px-4 font-medium">${s.id}</td>
+                        <td class="py-3 px-4">${s.name}</td>
+                        <td class="py-3 px-4 text-gray-400">${s.department}</td>
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <div class="w-24 bg-gray-700 rounded-full h-2">
+                                    <div class="h-2 rounded-full ${percent >= 75 ? 'bg-green-500' : percent >= 50 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${percent}%"></div>
+                                </div>
+                                <span class="text-sm">${percent}%</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="viewStudentDetails('${s.id}')" class="px-3 py-1 bg-red-600/20 text-red-500 rounded hover:bg-red-600/30 transition-colors">
+                                <i class="fas fa-eye mr-1"></i>View
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function populateStudentSelect() {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const select = document.getElementById('editStudentSelect');
+            select.innerHTML = '<option value="">Select a student</option>' +
+                students.map(s => `<option value="${s.id}">${s.name} (${s.id})</option>`).join('');
+        }
+        
+        function loadStudentAttendance() {
+            const studentId = document.getElementById('editStudentSelect').value;
+            if (!studentId) {
+                document.getElementById('editAttendanceTable').innerHTML = '<p class="text-gray-400">Select a student to view their attendance records.</p>';
+                return;
+            }
+            
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const studentAttendance = attendance.filter(a => a.studentId === studentId).reverse();
+            
+            if (studentAttendance.length === 0) {
+                document.getElementById('editAttendanceTable').innerHTML = '<p class="text-gray-400">No attendance records found for this student.</p>';
+                return;
+            }
+            
+            document.getElementById('editAttendanceTable').innerHTML = `
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left py-3 px-4 text-gray-400 font-medium">Date</th>
+                            <th class="text-left py-3 px-4 text-gray-400 font-medium">Status</th>
+                            <th class="text-left py-3 px-4 text-gray-400 font-medium">Time</th>
+                            <th class="text-left py-3 px-4 text-gray-400 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${studentAttendance.map(a => `
+                            <tr class="border-b border-gray-700/50 hover:bg-gray-800/50">
+                                <td class="py-3 px-4">${formatDate(a.date)}</td>
+                                <td class="py-3 px-4">
+                                    <span class="px-3 py-1 rounded-full text-sm ${a.status === 'present' ? 'bg-green-600/20 text-green-500' : 'bg-red-600/20 text-red-500'}">
+                                        ${a.status.charAt(0).toUpperCase() + a.status.slice(1)}
+                                    </span>
+                                </td>
+                                <td class="py-3 px-4 text-gray-400">${a.time || 'N/A'}</td>
+                                <td class="py-3 px-4">
+                                    <button onclick="quickToggle('${studentId}', '${a.date}')" class="px-3 py-1 bg-yellow-600/20 text-yellow-500 rounded hover:bg-yellow-600/30 transition-colors">
+                                        <i class="fas fa-exchange-alt mr-1"></i>Toggle
+                                    </button>
+                                    <button onclick="deleteRecord('${studentId}', '${a.date}')" class="px-3 py-1 bg-red-600/20 text-red-500 rounded hover:bg-red-600/30 transition-colors ml-2">
+                                        <i class="fas fa-trash mr-1"></i>Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function updateAttendance() {
+            const studentId = document.getElementById('editStudentSelect').value;
+            const date = document.getElementById('editDate').value;
+            const status = document.getElementById('editStatus').value;
+            
+            if (!studentId || !date) {
+                showToast('Please select student and date', 'error');
+                return;
+            }
+            
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const index = attendance.findIndex(a => a.studentId === studentId && a.date === date);
+            
+            const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            
+            if (index !== -1) {
+                attendance[index].status = status;
+                attendance[index].time = time;
+                showToast('Attendance updated successfully!', 'success');
+            } else {
+                attendance.push({ studentId, date, status, time });
+                showToast('Attendance record added successfully!', 'success');
+            }
+            
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+            loadStudentAttendance();
+            loadADMINDashboard();
+        }
+        
+        function quickToggle(studentId, date) {
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            const index = attendance.findIndex(a => a.studentId === studentId && a.date === date);
+            
+            if (index !== -1) {
+                attendance[index].status = attendance[index].status === 'present' ? 'absent' : 'present';
+                localStorage.setItem('attendance', JSON.stringify(attendance));
+                loadStudentAttendance();
+                showToast('Status toggled successfully!', 'success');
+            }
+        }
+        
+        function deleteRecord(studentId, date) {
+            if (!confirm('Are you sure you want to delete this record?')) return;
+            
+            let attendance = JSON.parse(localStorage.getItem('attendance'));
+            attendance = attendance.filter(a => !(a.studentId === studentId && a.date === date));
+            localStorage.setItem('attendance', JSON.stringify(attendance));
+            loadStudentAttendance();
+            showToast('Record deleted successfully!', 'success');
+        }
+        
+        function loadReports() {
+            const students = JSON.parse(localStorage.getItem('students'));
+            const attendance = JSON.parse(localStorage.getItem('attendance'));
+            
+            // Student summary
+            const summaryDiv = document.getElementById('studentSummary');
+            summaryDiv.innerHTML = students.map(s => {
+                const studentAttendance = attendance.filter(a => a.studentId === s.id);
+                const present = studentAttendance.filter(a => a.status === 'present').length;
+                const total = studentAttendance.length;
+                const percent = total > 0 ? Math.round((present / total) * 100) : 0;
+                
+                return `
+                    <div class="p-4 bg-gray-800 rounded-lg">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium">${s.name}</span>
+                            <span class="${percent >= 75 ? 'text-green-500' : percent >= 50 ? 'text-yellow-500' : 'text-red-500'}">${percent}%</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="h-2 rounded-full ${percent >= 75 ? 'bg-green-500' : percent >= 50 ? 'bg-yellow-500' : 'bg-red-500'}" style="width: ${percent}%"></div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">${present}/${total} days present</p>
+                    </div>
+                `;
+            }).join('');
+            
+            // Low attendance alert
+            const alertDiv = document.getElementById('lowAttendanceAlert');
+            const lowAttendance = students.filter(s => {
+                const studentAttendance = attendance.filter(a => a.studentId === s.id);
+                const present = studentAttendance.filter(a => a.status === 'present').length;
+                const percent = studentAttendance.length > 0 ? (present / studentAttendance.length) * 100 : 100;
+                return percent < 75;
+            });
+            
+            if (lowAttendance.length === 0) {
+                alertDiv.innerHTML = '<p class="text-green-500"><i class="fas fa-check-circle mr-2"></i>All students have good attendance!</p>';
+            } else {
+                alertDiv.innerHTML = lowAttendance.map(s => {
+                    const studentAttendance = attendance.filter(a => a.studentId === s.id);
+                    const present = studentAttendance.filter(a => a.status === 'present').length;
+                    const percent = studentAttendance.length > 0 ? Math.round((present / studentAttendance.length) * 100) : 0;
+                    
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-red-900/20 border border-red-600/30 rounded-lg">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-exclamation-triangle text-red-500"></i>
+                                <div>
+                                    <p class="font-medium">${s.name}</p>
+                                    <p class="text-xs text-gray-400">${s.id}</p>
+                                </div>
+                            </div>
+                            <span class="text-red-500 font-bold">${percent}%</span>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        function viewStudentDetails(studentId) {
+            document.getElementById('editStudentSelect').value = studentId;
+            showADMINSection('editAttendance');
+            loadStudentAttendance();
+        }
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+        
+        function formatMonth(monthStr) {
+            const date = new Date(monthStr + '-01');
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        }
+        
+        function getDayName(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { weekday: 'long' });
+        }
+        
+        function showToast(message, type) {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            toastIcon.className = type === 'success' ? 'fas fa-check-circle text-green-500' : 'fas fa-times-circle text-red-500';
+            
+            toast.classList.remove('translate-x-full');
+            setTimeout(() => toast.classList.add('translate-x-full'), 3000);
+        }
+        
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            initDatabase();
+            generateCaptcha();
+            
+            // Set max date to today for date input
+            document.getElementById('editDate').max = new Date().toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>
