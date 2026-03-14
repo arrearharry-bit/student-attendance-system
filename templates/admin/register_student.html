@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block title %}Register Student | Admin{% endblock %}
+{% block content %}
+<div style="max-width:520px; margin:0 auto;">
+    <a href="/admin/students" style="color:var(--accent);text-decoration:none;font-size:0.9rem">← Back to Students</a>
+    <h1 style="font-size:1.5rem;font-weight:700;margin:16px 0 4px">Register New Student</h1>
+    <p style="color:var(--text-muted);margin-bottom:28px">Create a student account and optionally upload their face photo.</p>
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <div class="card"><div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" class="form-control" placeholder="e.g. Amlan Mohanty" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Username <span class="text-danger">*</span> <small class="text-muted">(used for login)</small></label>
+                <input type="text" name="username" class="form-control" placeholder="e.g. amlan" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-control" placeholder="student@example.com">
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password <span class="text-danger">*</span></label>
+                <input type="password" name="password" class="form-control" placeholder="Set a password" required>
+            </div>
+            <hr style="border-color:var(--border)">
+            <div class="mb-4">
+                <label class="form-label">Face Photo <small class="text-muted">(PNG/JPG — enables face recognition)</small></label>
+                <input type="file" name="photo" accept=".png,.jpg,.jpeg" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-accent w-100"><i class="fa fa-user-plus me-2"></i>Register Student</button>
+        </form>
+    </div></div>
+</div>
+{% endblock %}

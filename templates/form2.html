@@ -33,12 +33,14 @@
         <td>Name</td>  
         <td>Time</td>  
         <td>Date</td>  
+        <td>Status</td>  
     </thead>    
     {% for row in rows %}  
         <tr>  
             <td>{{row["NAME"]}}</td>  
             <td>{{row["Time"]}}</td>  
             <td>{{row["Date"]}}</td>  
+            <td>{{row["STATUS"]}}</td>  
          
         </tr>  
       
@@ -50,6 +52,10 @@
 
     <button class="btn btn-primary">View Whole Database</button>
     </form>  
+<Br>
+<form action="/admin/edit" method="GET">
+    <button class="btn btn-warning">Manage Absentees</button>
+</form>
 <Br>
 </Br>
 <form action="/dashboard" method="post">

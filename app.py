@@ -1,298 +1,483 @@
-from flask import Flask,render_template,request
-import cv2
+"""
+app.py – Main Flask application.
+Clean, modular entry point. All routes organized cleanly.
+Run:   python init_db.py   (first time)
+Then:  python app.py
+"""
+from flask import (Flask, render_template, request, session,
+                   redirect, url_for, jsonify, send_file, flash)
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
+import os, io, json, base64
+import sqlite3 # Added sqlite3 import
 import numpy as np
+from datetime import date, datetime, timedelta
+from functools import wraps
+from dotenv import load_dotenv # Added dotenv import
+
+load_dotenv() # Call load_dotenv()
+
+from models import (init_db, get_db, get_user_by_username, get_user_by_id,
+                    create_user, update_user, get_all_students, search_students,
+                    mark_present, get_today_attendance, get_all_attendance,
+                    update_attendance_status, get_student_stats, log_audit, get_audit_logs)
+from face_utils import (recognize_frame, encode_all_images, get_encodings, 
+                        load_encodings, encode_single_image)
+import cv2
 import face_recognition
-import os
-from datetime import datetime
-from datetime import date
-import sqlite3
 
-name="amlan"
+# ─── App setup ────────────────────────────────────────────────────────────────
+
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY', 'default-dev-key') # Updated secret key loading
+app.config['ENV'] = os.getenv('FLASK_ENV', 'development') # Added FLASK_ENV config
 
-@app.route('/new', methods=['GET', 'POST'])
-def new():
-    if request.method=="POST":
-        return render_template('index.html')
-    else:
-        return "Everything is okay!"
+TRAINING_PATH = 'Training images'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
-@app.route('/name', methods=['GET', 'POST'])
-def name():
-    if request.method=="POST":
-        name1=request.form['name1']
-        name2=request.form['name2']
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-        cam = cv2.VideoCapture(0)
+# ─── Auth decorators ──────────────────────────────────────────────────────────
 
-       # cv2.namedWindow("Face Recogniser")
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please log in to continue.', 'warning')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
-    
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            flash('Admin access required.', 'danger')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated
 
-        while True:
-            ret, frame = cam.read()
-            if not ret:
-                print("failed to grab frame")
-                break
-            cv2.imshow("Press Space to capture image", frame)
+def student_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if session.get('role') != 'student':
+            flash('Student access required.', 'danger')
+            return redirect(url_for('student_dashboard'))
+        return f(*args, **kwargs)
+    return decorated
 
-            k = cv2.waitKey(1)
-            if k%256 == 27:
-                # ESC pressed
-                print("Escape hit, closing...")
-                break
-            elif k%256 == 32:
-                # SPACE pressed
-                img_name = name1+".png"
-                path='D:\\BACKUP 21-10-2021\\LOCAL DISK -D\\FRAMS2\\Training images'
-                cv2.imwrite(os.path.join(path,img_name), frame)
-                print("{} written!".format(img_name))
+# ─── Public routes ────────────────────────────────────────────────────────────
 
-                
+@app.route('/')
+def home():
+    today_count = len(get_today_attendance())
+    student_count = len(get_all_students())
+    return render_template('home.html', today_count=today_count, student_count=student_count)
 
-        cam.release()
-
-        cv2.destroyAllWindows()
-        return render_template('image.html')
-    else:
-        return 'All is not well'
-
-@app.route("/",methods=["GET","POST"])
-def recognize():
-     if request.method=="POST":
-        path = 'Training images'
-        images = []
-        classNames = []
-        myList = os.listdir(path)
-        print(myList)
-        for cl in myList:
-            curImg = cv2.imread(f'{path}/{cl}')
-            images.append(curImg)
-            classNames.append(os.path.splitext(cl)[0])
-        print(classNames)
-        
-        def findEncodings(images):
-            encodeList = []
-            for img in images:
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                encode = face_recognition.face_encodings(img)[0]
-                if not len(encode):
-                    print( "can't be encoded")
-                    continue
-                encodeList.append(encode)
-            return encodeList
-
-        def markData(name):
-            print("The Attended Person is ",name)
-            now = datetime.now()
-            dtString = now.strftime('%H:%M')
-            today = date.today()
-            d1 = today.strftime('%b-%d-%Y')
-            print("Today's date:", today)
-            conn = sqlite3.connect('information.db')
-            conn.execute('''CREATE TABLE IF NOT EXISTS Attendance
-                            (NAME TEXT  NOT NULL,
-                             Time  TEXT NOT NULL ,Date TEXT NOT NULL)''')
-                       
-            conn.execute("INSERT or Ignore into Attendance (NAME,Time,Date) values (?,?,?)",(name,dtString,today,))
-            conn.commit()  
-            cursor = conn.execute("SELECT NAME,Time,Date from Attendance")
-                                                                  
-            for line in cursor:
-                print("Name Updated :",line[0])
-                print("Time Updated :",line[1])
-            
-
-        
-        def markAttendance(name):
-            with open('attendance.csv','r+',errors='ignore') as f:
-                myDataList = f.readlines()
-                nameList = []
-                for line in myDataList:
-                    print(myDataList)
-                    entry = line.split(',')
-                    nameList.append(entry[0])
-                if name not in nameList:
-                    now = datetime.now()
-                    dtString = now.strftime('%H:%M')
-                    f.writelines(f'\n{name},{dtString}')
-    
-
-
-        
-        # ### FOR CAPTURING SCREEN RATHER THAN WEBCAM
-        # def captureScreen(bbox=(300,300,690+300,530+300)):
-        #     capScr = np.array(ImageGrab.grab(bbox))
-        #     capScr = cv2.cvtColor(capScr, cv2.COLOR_RGB2BGR)
-        #     return capScr
-        
-        encodeListKnown = findEncodings(images)
-        print('Encoding Complete')
-        
-        cap = cv2.VideoCapture(0)
-        
-        while True:
-            success, img = cap.read()
-            #img = captureScreen()
-            imgS = cv2.resize(img,(0,0),None,0.25,0.25)
-            imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
-        
-            facesCurFrame = face_recognition.face_locations(imgS)
-            encodesCurFrame = face_recognition.face_encodings(imgS,facesCurFrame)
-        
-            for encodeFace,faceLoc in zip(encodesCurFrame,facesCurFrame):
-                matches = face_recognition.compare_faces(encodeListKnown,encodeFace)
-                faceDis = face_recognition.face_distance(encodeListKnown,encodeFace)
-                #print(faceDis)
-                matchIndex = np.argmin(faceDis)
-        
-                if faceDis[matchIndex]< 0.50:
-                    name = classNames[matchIndex].upper()
-                    markAttendance(name)
-                    markData(name)
-                else:
-                    name = 'Unknown'
-                #print(name)
-                y1,x2,y2,x1 = faceLoc
-                y1, x2, y2, x1 = y1*4,x2*4,y2*4,x1*4
-                cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
-                cv2.rectangle(img,(x1,y2-35),(x2,y2),(0,255,0),cv2.FILLED)
-                cv2.putText(img,name,(x1+6,y2-6),cv2.FONT_HERSHEY_COMPLEX,1,(255,255,255),2)
-            cv2.imshow('Punch your Attendance',img)
-            c=cv2.waitKey(1)
-            if c == 27:
-                break
-        cap.release()
-        cv2.destroyAllWindows()
-
-        return render_template('first.html')
-        
-     else:
-        return render_template('main.html')
-
-
-@app.route('/login',methods = ['POST'])
+@app.route('/login', methods=['GET', 'POST'])
 def login():
-    #print( request.headers )
-    json_data = json.loads(request.data.decode())
-    username = json_data['username']
-    password = json_data['password']
-    #print(username,password)
-    df= pd.read_csv('cred.csv')
-    if len(df.loc[df['username'] == username]['password'].values) > 0:
-        if df.loc[df['username'] == username]['password'].values[0] == password:
-            session['username'] = username
-            return 'success'
-        else:
-            return 'failed'
-    else:
-        return 'failed'
-        
+    if 'user_id' in session:
+        return redirect(url_for('admin_dashboard') if session.get('role') == 'admin' else url_for('student_dashboard'))
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        user = get_user_by_username(username)
+        if user and user['status'] == 'active':
+            pw = user['password']
+            # Support both old SHA-256 and new Werkzeug format
+            import hashlib
+            valid = (check_password_hash(pw, password) if pw.startswith('pbkdf2:') or pw.startswith('scrypt:')
+                     else pw == hashlib.sha256(password.encode()).hexdigest())
+            if valid:
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['role'] = user['role']
+                session['user_name'] = user['name'] or user['username']
+                flash(f"Welcome back, {session['user_name']}!", 'success')
+                return redirect(url_for('admin_dashboard') if user['role'] == 'admin' else url_for('student_dashboard'))
+        flash('Invalid username or password.', 'danger')
+    return render_template('login.html')
 
+@app.route('/logout')
+def logout():
+    name = session.get('user_name', '')
+    session.clear()
+    flash(f'Goodbye, {name}!', 'info')
+    return redirect(url_for('home'))
+
+# Backward compat
+@app.route('/how')
+def how():
+    return redirect(url_for('login'))
 
 @app.route('/checklogin')
 def checklogin():
-    #print('here')
-    if 'username' in session:
-        return session['username']
-    return 'False'
+    return session.get('username', 'False')
 
+# ─── Webcam / Face Recognition ────────────────────────────────────────────────
 
-@app.route('/how',methods=["GET","POST"])
-def how():
-    return render_template('form.html')
-@app.route('/data',methods=["GET","POST"])
-def data():
-    '''user=request.form['username']
-    pass1=request.form['pass']
-    if user=="tech" and pass1=="tech@321" :
-    '''
-    if request.method=="POST":
-        today=date.today()
-        print(today)
-        conn = sqlite3.connect('information.db')
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        print ("Opened database successfully");
-        cursor = cur.execute("SELECT DISTINCT NAME,Time, Date from Attendance where Date=?",(today,))
-        rows=cur.fetchall()
-        print(rows)
-        for line in cursor:
+@app.route('/punch')
+def punch():
+    """Page offering choice between Browser Camera and Local Server Camera."""
+    return render_template('punch.html')
 
-            data1=list(line)
-        print ("Operation done successfully");
-        conn.close()
+@app.route('/recognize_local')
+@login_required
+def recognize_local():
+    """Restored 'Old Way': Opens a local OpenCV window for the highest accuracy."""
+    video_capture = cv2.VideoCapture(0)
+    
+    encode_list, class_names = get_encodings()
+    if not encode_list:
+        flash("No faces encoded! Add students with photos first.", "danger")
+        return redirect(url_for('admin_dashboard'))
 
-        return render_template('form2.html',rows=rows)
-    else:
-        return render_template('form1.html')
+    flash("Local Camera Started. Press 'q' to close the window.", "info")
+    
+    while True:
+        ret, frame = video_capture.read()
+        if not ret: break
 
+        # Resize for faster processing (now 50% for better accuracy)
+        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
 
+        face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
+
+        for face_encoding, face_location in zip(face_encodings, face_locations):
+            face_distances = face_recognition.face_distance(encode_list, face_encoding)
+            best_match_index = np.argmin(face_distances)
+            dist = float(face_distances[best_match_index])
             
-@app.route('/whole',methods=["GET","POST"])
-def whole():
-    today=date.today()
-    print(today)
-    conn = sqlite3.connect('information.db')
-    conn.row_factory = sqlite3.Row 
-    cur = conn.cursor() 
-    print ("Opened database successfully");
-    cursor = cur.execute("SELECT DISTINCT NAME,Time, Date from Attendance")
-    rows=cur.fetchall()    
-    return render_template('form3.html',rows=rows)
+            # HUD details
+            name = class_names[best_match_index].upper() if dist < 0.6 else "UNKNOWN"
+            color = (0, 255, 0) if dist < 0.6 else (0, 0, 255)
+            
+            # Mark attendance in DB if match is good
+            if dist < 0.6:
+                if mark_present(name):
+                    print(f"MATCH: {name} - Marked Present (dist: {dist:.3f})")
+            
+            # Draw box & Label
+            top, right, bottom, left = face_location
+            top, right, bottom, left = top*2, right*2, bottom*2, left*2
+            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
+            label = f"{name} ({dist:.2f})"
+            cv2.putText(frame, label, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
 
-@app.route('/dashboard',methods=["GET","POST"])
+        cv2.imshow('Face Recognition (Press Q to Quit)', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    video_capture.release()
+    cv2.destroyAllWindows()
+    return redirect(url_for('home'))
+
+@app.route('/recognize_ajax', methods=['POST'])
+def recognize_ajax():
+    """AJAX endpoint: receives base64 image, returns recognition result."""
+    try:
+        data = request.get_json()
+        if not data or 'image' not in data:
+            return jsonify({'success': False, 'message': 'No image provided'})
+
+        img_b64 = data['image'].split(',')[-1]  # strip data:image/... prefix
+        img_bytes = base64.b64decode(img_b64)
+        img_array = np.frombuffer(img_bytes, dtype=np.uint8)
+
+        import cv2
+        frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+        if frame is None:
+            return jsonify({'success': False, 'message': 'Cannot decode image'})
+
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        name, confidence = recognize_frame(rgb_frame)
+
+        if name == 'Unknown' or confidence < 0.35:
+            return jsonify({'success': True, 'name': 'Unknown', 'confidence': 0})
+
+        already = not mark_present(name)
+        return jsonify({
+            'success': True,
+            'name': name.title(),
+            'confidence': confidence,
+            'already_marked': already
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+# Legacy streaming route (keep for backward compat)
+@app.route('/recognize', methods=['GET', 'POST'])
+def recognize():
+    return redirect(url_for('punch'))
+
+# ─── Student Dashboard ────────────────────────────────────────────────────────
+
+@app.route('/student/dashboard')
+@student_required
+def student_dashboard():
+    username = session['username']
+    user = get_user_by_id(session['user_id'])
+    display_name = (user['name'] or username).upper()
+
+    filter_type = request.args.get('filter', 'all')
+    today = date.today()
+    if filter_type == 'month':
+        from_date = str(today.replace(day=1))
+    elif filter_type == 'semester':
+        from_date = str(today - timedelta(days=120))
+    else:
+        from_date = None
+
+    total, present, absent, pct, records = get_student_stats(display_name, from_date)
+
+    # Chart data
+    daily = {}
+    for r in records:
+        d = str(r['Date'])
+        if d not in daily:
+            daily[d] = {'Present': 0, 'Absent': 0}
+        
+        status_key = r['STATUS']
+        if status_key in daily[d]:
+            daily[d][status_key] += 1
+            
+    recent_dates = sorted(daily.keys())
+    chart_labels = recent_dates[-30:] if len(recent_dates) > 30 else recent_dates
+    chart_present = [daily[d].get('Present', 0) for d in chart_labels]
+    chart_absent  = [daily[d].get('Absent', 0) for d in chart_labels]
+
+    return render_template('student/dashboard.html',
+        display_name=display_name, total=total, present=present,
+        absent=absent, pct=pct, records=list(records)[:20],
+        chart_labels=json.dumps(chart_labels),
+        chart_present=json.dumps(chart_present),
+        chart_absent=json.dumps(chart_absent),
+        filter_type=filter_type)
+
+# ─── Admin Dashboard ──────────────────────────────────────────────────────────
+
+@app.route('/admin/dashboard')
+@admin_required
+def admin_dashboard():
+    students = get_all_students()
+    today_rows = get_today_attendance()
+    audit_logs = get_audit_logs(20)
+
+    total_students = len(students)
+    today_present = len([r for r in today_rows if r['STATUS'] == 'Present'])
+    attendance_rate = round((today_present / total_students * 100), 1) if total_students else 0
+
+    # Weekly trend – last 7 days
+    trend_labels, trend_counts = [], []
+    for i in range(6, -1, -1):
+        d = str(date.today() - timedelta(days=i))
+        with get_db() as conn:
+            cnt = conn.execute("SELECT COUNT(*) FROM Attendance WHERE Date=? AND STATUS='Present'", (d,)).fetchone()[0]
+        trend_labels.append(d[-5:])
+        trend_counts.append(cnt)
+
+    return render_template('admin/dashboard.html',
+        total_students=total_students,
+        today_present=today_present,
+        attendance_rate=attendance_rate,
+        today_rows=today_rows,
+        audit_logs=audit_logs,
+        trend_labels=json.dumps(trend_labels),
+        trend_counts=json.dumps(trend_counts))
+
+# ─── Admin: Student Management ────────────────────────────────────────────────
+
+@app.route('/admin/students')
+@admin_required
+def admin_students():
+    search = request.args.get('search', '').strip()
+    status_filter = request.args.get('status', '')
+    users = search_students(search, status_filter)
+
+    students = []
+    for u in users:
+        sname = (u['name'] or u['username']).upper()
+        total, present, absent, pct, _ = get_student_stats(sname)
+        students.append({
+            'id': u['id'], 'username': u['username'], 'name': u['name'],
+            'email': u['email'], 'status': u['status'],
+            'total': total, 'present': present, 'absent': absent, 'pct': pct
+        })
+    return render_template('admin/students.html', students=students,
+                           search=search, status_filter=status_filter)
+
+@app.route('/admin/student/<int:sid>', methods=['GET'])
+@admin_required
+def admin_student_detail(sid):
+    user = get_user_by_id(sid)
+    if not user:
+        return "Student not found", 404
+    sname = (user['name'] or user['username']).upper()
+    date_from = request.args.get('from', '')
+    date_to   = request.args.get('to', '')
+    records = get_all_attendance(name=sname, from_date=date_from or None, to_date=date_to or None)
+    total = len(records)
+    present = sum(1 for r in records if r['STATUS'] == 'Present')
+    pct = round((present / total * 100), 1) if total else 0
+    return render_template('admin/student_detail.html',
+        student=user, records=records,
+        total=total, present=present, absent=total-present, pct=pct,
+        date_from=date_from, date_to=date_to)
+
+@app.route('/admin/student/<int:sid>/edit', methods=['GET', 'POST'])
+@admin_required
+def admin_student_edit(sid):
+    user = get_user_by_id(sid)
+    if not user:
+        return "Student not found", 404
+    if request.method == 'POST':
+        name   = request.form.get('name', user['name'])
+        email  = request.form.get('email', user['email'])
+        status = request.form.get('status', user['status'])
+        new_pw = request.form.get('new_password', '').strip()
+        hashed = generate_password_hash(new_pw) if new_pw else None
+        update_user(sid, name, email, status, hashed)
+        log_audit(session['username'], 'EDIT_STUDENT', user['username'], f'status={status}')
+        flash(f'Profile updated for {name}.', 'success')
+        return redirect(url_for('admin_student_detail', sid=sid))
+    return render_template('admin/student_edit.html', student=user)
+
+@app.route('/admin/student/register', methods=['GET', 'POST'])
+@admin_required
+def admin_register_student():
+    error = None
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '').strip()
+        name     = request.form.get('name', '').strip()
+        email    = request.form.get('email', '').strip()
+        photo    = request.files.get('photo')
+
+        if not username or not password:
+            error = 'Username and password are required.'
+        else:
+            try:
+                create_user(username, generate_password_hash(password), name, email, 'student')
+                log_audit(session['username'], 'REGISTER_STUDENT', username)
+                # Handle photo upload
+                if photo and allowed_file(photo.filename):
+                    filename = secure_filename(f"{name or username}.png")
+                    save_path = os.path.join(TRAINING_PATH, filename)
+                    photo.save(save_path)
+                    encode_single_image(save_path, name or username)
+                    flash(f'Student {name} registered and face encoded!', 'success')
+                else:
+                    flash(f'Student {name} registered. Upload a photo to enable face recognition.', 'info')
+                return redirect(url_for('admin_students'))
+            except Exception as e:
+                error = str(e)
+    return render_template('admin/register_student.html', error=error)
+
+@app.route('/admin/attendance/edit', methods=['POST'])
+@admin_required
+def admin_attendance_edit():
+    rowid   = request.form.get('rowid')
+    status  = request.form.get('status')
+    sid     = request.form.get('student_id')
+    update_attendance_status(rowid, status)
+    log_audit(session['username'], 'EDIT_ATTENDANCE', f'rowid={rowid}', f'status={status}')
+    return redirect(url_for('admin_student_detail', sid=sid))
+
+@app.route('/admin/edit', methods=['GET'])
+@admin_required
+def admin_edit():
+    today = str(date.today())
+    with get_db() as conn:
+        present_today = [r['NAME'].upper() for r in
+            conn.execute("SELECT NAME FROM Attendance WHERE Date=?", (today,)).fetchall()]
+    from face_utils import get_encodings
+    _, class_names = get_encodings()
+    not_marked = [n for n in class_names if n.upper() not in present_today]
+    return render_template('admin_edit.html', students=not_marked)
+
+@app.route('/admin/mark_absent', methods=['POST'])
+@admin_required
+def mark_absent():
+    absent_students = request.form.getlist('absent_students')
+    today = str(date.today())
+    now_str = datetime.now().strftime('%H:%M')
+    with get_db() as conn:
+        for name in absent_students:
+            conn.execute("INSERT OR IGNORE INTO Attendance (NAME,Time,Date,STATUS) VALUES (?,?,?,?)",
+                         (name.upper(), now_str, today, 'Absent'))
+    flash(f'Marked {len(absent_students)} student(s) as Absent.', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/reencode', methods=['POST'])
+@admin_required
+def admin_reencode():
+    count = encode_all_images()
+    log_audit(session['username'], 'RE_ENCODE', 'all', f'{count} faces encoded')
+    flash(f'Re-encoded {count} face(s) successfully!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+# ─── Reports & Exports ────────────────────────────────────────────────────────
+
+@app.route('/data', methods=['GET', 'POST'])
+@admin_required
+def data():
+    if request.method == 'POST':
+        rows = get_today_attendance()
+        return render_template('admin/today_attendance.html', rows=rows)
+    return render_template('admin/today_attendance.html', rows=get_today_attendance())
+
+@app.route('/whole')
+@admin_required
+def whole():
+    rows = get_all_attendance()
+    return render_template('admin/whole_attendance.html', rows=rows)
+
+@app.route('/export/csv')
+@admin_required
+def export_csv():
+    import pandas as pd
+    rows = get_all_attendance()
+    data = [{'Name': r['NAME'], 'Time': r['Time'], 'Date': r['Date'], 'Status': r['STATUS']} for r in rows]
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    df.to_csv(output, index=False)
+    output.seek(0)
+    return send_file(output, mimetype='text/csv',
+                     as_attachment=True, download_name='attendance_report.csv')
+
+# ─── PowerBI Integration ───────────────────────────────────────────────────────
+
+@app.route('/dashboard')
+@admin_required
 def dashboard():
     return render_template('dashboard.html')
 
-# Sending Email about the attendance report to the faculties/ parents / etc.
-# Not working currently
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.mime.text import MIMEText
+# ─── Error Handlers ───────────────────────────────────────────────────────────
 
-def sendMail():
-    mssg=MIMEMultipart()
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('error.html', code=404, message="Page Not Found"), 404
 
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('error.html', code=500, message="Internal Server Error"), 500
 
-    server=smtplib.SMTP("smtp.gmail.com",'587')
-    server.starttls()
-    print("Connected with the server")
-    user=input("Enter username:")
-    pwd=input("Enter password:")
-    server.login(user,pwd)
-    print("Login Successful!")
-    send=user
-    rcv=input("Enter Receiver's Email id:")
-    mssg["Subject"] = "Employee Report csv"
-    mssg["From"] = user
-    mssg["To"] = rcv
+# ─── Startup ─────────────────────────────────────────────────────────────────
 
-    body='''
-        <html>
-        <body>
-         <h1>Employee Quarterly Report</h1>
-         <h2>Contains the details of all the employees</h2>
-         <p>Do not share confidential information with anyone.</p>
-        </body>
-        </html>
-         '''
-
-    body_part=MIMEText(body,'html')
-    mssg.attach(body_part)
-
-    with open("emp.csv",'rb') as f:
-        mssg.attach(MIMEApplication(f.read(),Name="emp.csv"))
-
-    server.sendmail(mssg["From"],mssg["To"],mssg.as_string())
-   # server.quit()
-
-
-
+init_db()
+load_encodings()
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-
-
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('DEBUG', 'True').lower() == 'true'
+    app.run(debug=debug, host=host, port=port, ssl_context='adhoc')

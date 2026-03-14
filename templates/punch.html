@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Punch Attendance{% endblock %}
+{% block extra_css %}
+<style>
+.video-container { position:relative; border-radius:16px; overflow:hidden; max-width:640px; margin:0 auto; background:#000; border:2px solid var(--border); }
+#webcam { width:100%; display:block; }
+.video-overlay { position:absolute; inset:0; pointer-events:none; }
+.corner { position:absolute; width:24px; height:24px; border-color:var(--accent); border-style:solid; }
+.corner-tl { top:16px;  left:16px;  border-width:3px 0 0 3px; }
+.corner-tr { top:16px;  right:16px; border-width:3px 3px 0 0; }
+.corner-bl { bottom:16px; left:16px;  border-width:0 0 3px 3px; }
+.corner-br { bottom:16px; right:16px; border-width:0 3px 3px 0; }
+</style>
+{% endblock %}
+{% block content %}
+<div style="max-width:700px; margin:0 auto;">
+    <h1 style="font-size:1.8rem; font-weight:700; margin-bottom:6px"><i class="fa fa-camera" style="color:var(--accent)"></i> Punch Your Attendance</h1>
+    <p style="color:var(--text-muted); margin-bottom:24px">Position your face in the frame. Recognition happens automatically.</p>
+
+    <div class="video-container mb-4">
+        <video id="webcam" autoplay muted playsinline></video>
+        <div class="video-overlay">
+            <div class="corner corner-tl"></div>
+            <div class="corner corner-tr"></div>
+            <div class="corner corner-bl"></div>
+            <div class="corner corner-br"></div>
+        </div>
+    </div>
+
+    <div id="recog-status" style="text-align:center; font-size:1rem; font-weight:600; min-height:28px; margin-bottom:16px; color:var(--text-muted)">Camera not started.</div>
+
+    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+        <button id="start-camera" class="btn btn-accent px-4"><i class="fa fa-globe me-2"></i>Browser Camera</button>
+        <a href="/recognize_local" class="btn btn-outline-accent px-4"><i class="fa fa-desktop me-2"></i>Local Camera (High Accuracy)</a>
+        <button id="stop-camera" class="btn btn-outline-danger px-4"><i class="fa fa-stop me-2"></i>Stop</button>
+    </div>
+
+    <div class="card mt-4" style="background:rgba(124,111,247,0.06);">
+        <div class="card-body" style="font-size:0.88rem; color:var(--text-muted);">
+            <strong style="color:var(--text)">How it works:</strong>
+            1. Click "Start Camera" → 2. Position face in the frame → 3. Wait for automatic recognition → 4. See your name confirmed ✅
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}<script src="/static/js/webcam.js"></script>{% endblock %}

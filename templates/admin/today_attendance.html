@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block title %}Today's Attendance{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size:1.6rem;font-weight:700">Today's Attendance</h1>
+    <a href="/export/csv" class="btn btn-outline-accent btn-sm"><i class="fa fa-download me-1"></i>Export CSV</a>
+</div>
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Name</th><th>Time</th><th>Date</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for row in rows %}
+                <tr>
+                    <td><strong>{{ row['NAME'] }}</strong></td>
+                    <td>{{ row['Time'] }}</td>
+                    <td>{{ row['Date'] }}</td>
+                    <td><span class="badge badge-{{ row['STATUS']|lower }}">{{ row['STATUS'] }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="4" class="text-center py-5" style="color:var(--text-muted)">No attendance records today.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

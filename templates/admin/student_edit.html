@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+{% block title %}Edit Student{% endblock %}
+{% block content %}
+<div style="max-width:520px; margin:0 auto;">
+    <a href="/admin/student/{{ student['id'] }}" style="color:var(--accent);text-decoration:none;font-size:0.9rem">← Back to Profile</a>
+    <h1 style="font-size:1.5rem;font-weight:700;margin:16px 0 4px">Edit Student</h1>
+    <p style="color:var(--text-muted);margin-bottom:28px">Editing: <strong>{{ student['username'] }}</strong></p>
+    <div class="card">
+        <div class="card-body">
+            <form method="POST">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
+                    <input type="text" name="name" class="form-control" value="{{ student['name'] or '' }}" placeholder="Full name">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" value="{{ student['email'] or '' }}" placeholder="student@example.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Account Status</label>
+                    <select name="status" class="form-select">
+                        <option value="active"    {% if student['status']=='active'    %}selected{% endif %}>✅ Active</option>
+                        <option value="inactive"  {% if student['status']=='inactive'  %}selected{% endif %}>❌ Inactive</option>
+                        <option value="suspended" {% if student['status']=='suspended' %}selected{% endif %}>⚠️ Suspended</option>
+                    </select>
+                </div>
+                <hr style="border-color:var(--border)">
+                <div class="mb-3">
+                    <label class="form-label">New Password <small class="text-muted">(leave blank to keep current)</small></label>
+                    <input type="password" name="new_password" class="form-control" placeholder="New password…">
+                </div>
+                <button type="submit" class="btn btn-accent w-100">Save Changes</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

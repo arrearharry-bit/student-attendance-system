@@ -1,12 +1,26 @@
-<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/html">
-<head>
-    <meta charset="UTF-8">
-    <title></title>
-</head>
-<body>
+{% extends "base.html" %}
 
-<iframe title="FRAMS-report-4 - Page 1" width="1024" height="1060" src="https://app.powerbi.com/view?r=eyJrIjoiNDY0ZDM5YjktZjcyYi00YjUzLWEzZjAtMjc3OGRmMDJjNzdiIiwidCI6ImFhZWU4ZmFkLTkyYjAtNDBhZC1hMTk5LWM4MmM0ZTgzYjIxNiJ9" frameborder="0" allowFullScreen="true"></iframe>
+{% block title %}Power BI Dashboard{% endblock %}
 
-</body>
-</html>
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2 text-light">Power BI Analytics</h1>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card bg-dark border-secondary shadow-sm">
+            <div class="card-body p-0" style="height: 800px; overflow: hidden;">
+                <iframe title="FRAMS-report-4 - Page 1" 
+                        width="100%" 
+                        height="100%" 
+                        src="https://app.powerbi.com/view?r=eyJrIjoiNDY0ZDM5YjktZjcyYi00YjUzLWEzZjAtMjc3OGRmMDJjNzdiIiwidCI6ImFhZWU4ZmFkLTkyYjAtNDBhZC1hMTk5LWM4MmM0ZTgzYjIxNiJ9" 
+                        frameborder="0" 
+                        allowFullScreen="true"
+                        style="border: none;">
+                </iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

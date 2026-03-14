@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size:1.6rem; font-weight:700">Admin Dashboard</h1>
+    <form method="POST" action="/admin/reencode" style="display:inline">
+        <button class="btn btn-outline-accent btn-sm"><i class="fa fa-sync me-1"></i> Re-encode Faces</button>
+    </form>
+</div>
+
+<!-- KPI Row -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-md-3">
+        <div class="card p-4 text-center">
+            <div style="font-size:2.4rem; font-weight:800; color:var(--accent)">{{ total_students }}</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-top:4px">Total Students</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card p-4 text-center">
+            <div style="font-size:2.4rem; font-weight:800; color:var(--green)">{{ today_present }}</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-top:4px">Present Today</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card p-4 text-center">
+            <div style="font-size:2.4rem; font-weight:800; color:{% if attendance_rate >= 75 %}var(--green){% else %}var(--red){% endif %}">{{ attendance_rate }}%</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-top:4px">Today's Rate</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="card p-4 text-center">
+            <div style="font-size:2.4rem; font-weight:800; color:var(--red)">{{ total_students - today_present }}</div>
+            <div style="color:var(--text-muted); font-size:0.85rem; margin-top:4px">Absent Today</div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-3 mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header"><i class="fa fa-chart-bar me-2" style="color:var(--accent)"></i>7-Day Attendance Trend</div>
+            <div class="card-body"><canvas id="trendChart" height="90"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="fa fa-chart-pie me-2" style="color:var(--green)"></i>Today's Split</div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <canvas id="pieChart" height="180"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Action Buttons -->
+<div class="d-flex gap-2 flex-wrap mb-4">
+    <a href="/admin/students" class="btn btn-accent"><i class="fa fa-users me-2"></i>Manage Students</a>
+    <a href="/admin/edit" class="btn btn-outline-accent"><i class="fa fa-calendar-times me-2"></i>Mark Absent</a>
+    <a href="/export/csv" class="btn btn-outline-secondary"><i class="fa fa-download me-2"></i>Export CSV</a>
+    <a href="/admin/student/register" class="btn btn-outline-secondary"><i class="fa fa-user-plus me-2"></i>Add Student</a>
+</div>
+
+<!-- Today's Attendance + Audit Log -->
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">Today's Attendance</div>
+            <div class="card-body p-0" style="max-height:320px; overflow-y:auto;">
+                <table class="table table-hover mb-0">
+                    <thead><tr><th>Name</th><th>Time</th><th>Status</th></tr></thead>
+                    <tbody>
+                        {% for row in today_rows %}
+                        <tr>
+                            <td>{{ row['NAME'] }}</td>
+                            <td>{{ row['Time'] }}</td>
+                            <td><span class="badge badge-{{ row['STATUS']|lower }}">{{ row['STATUS'] }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center py-4" style="color:var(--text-muted)">No attendance yet today.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">Recent Audit Log</div>
+            <div class="card-body p-0" style="max-height:320px; overflow-y:auto;">
+                <table class="table mb-0">
+                    <thead><tr><th>Admin</th><th>Action</th><th>Time</th></tr></thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr>
+                            <td style="font-size:0.82rem">{{ log['admin_username'] }}</td>
+                            <td style="font-size:0.82rem">{{ log['action'] }}</td>
+                            <td style="font-size:0.78rem; color:var(--text-muted)">{{ log['timestamp'][:16] }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-center py-4" style="color:var(--text-muted)">No actions logged.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const tl = {{ trend_labels|safe }};
+const tc = {{ trend_counts|safe }};
+new Chart(document.getElementById('trendChart'), {
+    type:'bar',
+    data:{ labels:tl, datasets:[{label:'Present', data:tc,
+        backgroundColor:'rgba(63,185,80,0.3)', borderColor:'#3fb950',
+        borderWidth:2, borderRadius:6}]},
+    options:{ plugins:{legend:{labels:{color:'#e6edf3'}}}, scales:{
+        x:{ticks:{color:'#8b949e'}, grid:{color:'rgba(255,255,255,0.05)'}},
+        y:{ticks:{color:'#8b949e'}, grid:{color:'rgba(255,255,255,0.05)'}, beginAtZero:true}}}
+});
+new Chart(document.getElementById('pieChart'), {
+    type:'doughnut',
+    data:{
+        labels:['Present ({{ today_present }})','Absent ({{ total_students - today_present }})'],
+        datasets:[{data:[{{ today_present }},{{ total_students - today_present }}],
+            backgroundColor:['#3fb950','#f85149'], borderWidth:0, hoverOffset:6}]},
+    options:{plugins:{legend:{labels:{color:'#e6edf3'},position:'bottom'}},cutout:'68%'}
+});
+</script>
+{% endblock %}

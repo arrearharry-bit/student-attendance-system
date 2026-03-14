@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Attendance | {{ display_name }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:linear-gradient(135deg,#0f0c29,#302b63,#1a1a2e); color:#e6edf3; min-height:100vh; }
+        nav { padding:18px 30px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); backdrop-filter:blur(10px); border-bottom:1px solid rgba(255,255,255,0.08); }
+        .nav-brand { font-size:1.2rem; font-weight:700; color:#a89ffa; }
+        .nav-user { display:flex; align-items:center; gap:14px; }
+        .avatar-sm { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#7c6ff7,#5b52e0); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; }
+        .btn-logout { padding:8px 16px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); color:#e6edf3; border-radius:8px; text-decoration:none; font-size:0.85rem; transition:all 0.2s; }
+        .btn-logout:hover { background:rgba(255,255,255,0.15); }
+        .main { max-width:1100px; margin:0 auto; padding:36px 20px; }
+        .hero { margin-bottom:36px; }
+        .greeting { font-size:0.9rem; color:rgba(255,255,255,0.5); margin-bottom:4px; }
+        h1 { font-size:2rem; font-weight:800; }
+        .filters { display:flex; gap:10px; margin: 0 0 32px 0; flex-wrap:wrap; }
+        .filter-btn { padding:8px 18px; border-radius:20px; font-size:0.85rem; font-weight:600; text-decoration:none; border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); transition:all 0.2s; }
+        .filter-btn.active, .filter-btn:hover { background:rgba(124,111,247,0.3); border-color:#7c6ff7; color:#fff; }
+        .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:30px; }
+        @media(max-width:700px) { .kpi-grid { grid-template-columns:repeat(2,1fr); } }
+        .kpi-card {
+            background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+            border-radius:16px; padding:24px; text-align:center; cursor:default;
+            transition:all 0.3s; position:relative; overflow:hidden;
+        }
+        .kpi-card::before { content:''; position:absolute; top:-30%; left:-30%; width:160%; height:160%; border-radius:50%; opacity:0.06; }
+        .kpi-card:nth-child(1)::before { background:#7c6ff7; }
+        .kpi-card:nth-child(2)::before { background:#3fb950; }
+        .kpi-card:nth-child(3)::before { background:#f85149; }
+        .kpi-card:nth-child(4)::before { background:#d29922; }
+        .kpi-card:hover { transform:translateY(-4px); border-color:rgba(124,111,247,0.4); }
+        .kpi-icon { font-size:1.3rem; margin-bottom:8px; }
+        .kpi-label { font-size:0.8rem; color:rgba(255,255,255,0.5); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.05em; }
+        .kpi-val { font-size:2.6rem; font-weight:800; line-height:1; }
+        .warning-banner {
+            background:rgba(248,81,73,0.1); border:1px solid rgba(248,81,73,0.3); border-radius:12px;
+            padding:16px 20px; margin-bottom:28px; display:flex; align-items:center; gap:12px; color:#f85149;
+        }
+        .charts-grid { display:grid; grid-template-columns:2fr 1fr; gap:18px; margin-bottom:30px; }
+        @media(max-width:760px) { .charts-grid { grid-template-columns:1fr; } }
+        .chart-card { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:24px; }
+        .chart-title { font-size:1rem; font-weight:600; margin-bottom:16px; color:rgba(255,255,255,0.8); }
+        .history-section { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:24px; }
+        h2 { font-size:1.1rem; font-weight:600; margin-bottom:16px; }
+        table { width:100%; border-collapse:collapse; }
+        th { padding:10px 14px; text-align:left; font-size:0.78rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.05em; }
+        td { padding:10px 14px; border-top:1px solid rgba(255,255,255,0.07); font-size:0.9rem; }
+        .badge { padding:4px 10px; border-radius:20px; font-size:0.78rem; font-weight:600; }
+        .badge-present { background:rgba(63,185,80,0.15); color:#3fb950; }
+        .badge-absent { background:rgba(248,81,73,0.15); color:#f85149; }
+        .badge-excused { background:rgba(210,153,34,0.15); color:#d29922; }
+    </style>
+</head>
+<body>
+<nav>
+    <span class="nav-brand">🎓 My Attendance</span>
+    <div class="nav-user">
+        <div class="avatar-sm">{{ display_name[0] }}</div>
+        <span>{{ display_name }}</span>
+        <a href="/logout" class="btn-logout"><i class="fa fa-sign-out-alt"></i> Logout</a>
+    </div>
+</nav>
+<div class="main">
+    <div class="hero">
+        <div class="greeting">Welcome back,</div>
+        <h1>{{ display_name }}</h1>
+    </div>
+
+    <div class="filters">
+        <a href="?filter=all" class="filter-btn {% if filter_type=='all' %}active{% endif %}">All Time</a>
+        <a href="?filter=month" class="filter-btn {% if filter_type=='month' %}active{% endif %}">This Month</a>
+        <a href="?filter=semester" class="filter-btn {% if filter_type=='semester' %}active{% endif %}">This Semester</a>
+    </div>
+
+    {% if pct < 75 and total > 0 %}
+    <div class="warning-banner">
+        <i class="fa fa-exclamation-triangle fa-lg"></i>
+        <div>
+            <strong>Low Attendance Alert!</strong> Your attendance is <strong>{{ pct }}%</strong>.
+            Minimum required is 75%. Please attend more classes to avoid academic penalties.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="kpi-grid">
+        <div class="kpi-card">
+            <div class="kpi-icon">📅</div>
+            <div class="kpi-label">Total Days</div>
+            <div class="kpi-val" style="color:#a89ffa">{{ total }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-label">Present</div>
+            <div class="kpi-val" style="color:#3fb950">{{ present }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">❌</div>
+            <div class="kpi-label">Absent</div>
+            <div class="kpi-val" style="color:#f85149">{{ absent }}</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-icon">📊</div>
+            <div class="kpi-label">Attendance %</div>
+            <div class="kpi-val" style="color:{% if pct >= 90 %}#3fb950{% elif pct >= 75 %}#d29922{% else %}#f85149{% endif %}">{{ pct }}%</div>
+        </div>
+    </div>
+
+    <div class="charts-grid">
+        <div class="chart-card">
+            <div class="chart-title">Attendance Trend (Last 30 Days)</div>
+            <canvas id="trendChart" height="120"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Overall Breakdown</div>
+            <canvas id="pieChart" height="160"></canvas>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <h2>Recent Attendance History</h2>
+        <table>
+            <thead><tr><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+                {% if records %}
+                {% for r in records %}
+                <tr>
+                    <td>{{ r['Date'] }}</td>
+                    <td>{{ r['Time'] }}</td>
+                    <td><span class="badge badge-{{ r['STATUS']|lower }}">{{ r['STATUS'] }}</span></td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <tr><td colspan="3" style="text-align:center; padding:30px; color:rgba(255,255,255,0.3);">
+                    No attendance records found.{% if total==0 %} Start attending classes!{% endif %}
+                </td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+const labels = {{ chart_labels|safe }};
+const presentData = {{ chart_present|safe }};
+const absentData = {{ chart_absent|safe }};
+
+new Chart(document.getElementById('trendChart'), {
+    type: 'line',
+    data: {
+        labels: labels,
+        datasets: [
+            { label: 'Present', data: presentData, borderColor: '#3fb950', backgroundColor: 'rgba(63,185,80,0.1)', fill: true, tension: 0.4, pointRadius: 3 },
+            { label: 'Absent', data: absentData, borderColor: '#f85149', backgroundColor: 'rgba(248,81,73,0.1)', fill: true, tension: 0.4, pointRadius: 3 }
+        ]
+    },
+    options: { plugins: { legend: { labels: { color: '#e6edf3' } } }, scales: { x: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(255,255,255,0.05)' } }, y: { ticks: { color: '#8b949e' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true } } }
+});
+
+new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Present ({{ present }})', 'Absent ({{ absent }})'],
+        datasets: [{ data: [{{ present }}, {{ absent }}], backgroundColor: ['#3fb950', '#f85149'], borderWidth: 0, hoverOffset: 8 }]
+    },
+    options: { plugins: { legend: { labels: { color: '#e6edf3' }, position: 'bottom' } }, cutout: '70%' }
+});
+</script>
+</body>
+</html>

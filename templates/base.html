@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Attendance System{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+    <style>
+        :root {
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-tertiary: #21262d;
+            --border: #30363d;
+            --text: #e6edf3;
+            --text-muted: #8b949e;
+            --accent: #7c6ff7;
+            --accent-hover: #a89ffa;
+            --green: #3fb950;
+            --red: #f85149;
+            --yellow: #d29922;
+            --sidebar-width: 240px;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text); min-height: 100vh; }
+
+        /* ── Navbar ── */
+        .app-nav {
+            position: sticky; top: 0; z-index: 200;
+            background: rgba(22,27,34,0.95); backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px; display: flex; align-items: center; gap: 16px;
+        }
+        .nav-brand { font-size: 1.1rem; font-weight: 800; color: var(--accent); text-decoration: none; }
+        .nav-brand span { color: var(--text); font-weight: 400; }
+        .nav-spacer { flex: 1; }
+        .nav-user { display: flex; align-items: center; gap: 12px; font-size: 0.9rem; }
+        .nav-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #5b52e0); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.95rem; }
+        .nav-link-btn { color: var(--text-muted); text-decoration: none; font-size: 0.88rem; padding: 6px 12px; border-radius: 6px; transition: all 0.2s; }
+        .nav-link-btn:hover { background: var(--bg-tertiary); color: var(--text); }
+        .nav-link-btn.active { color: var(--accent); }
+
+        /* ── Sidebar + Layout ── */
+        .app-layout { display: flex; min-height: calc(100vh - 57px); }
+        .sidebar {
+            width: var(--sidebar-width); background: var(--bg-secondary); border-right: 1px solid var(--border);
+            padding: 20px 12px; display: flex; flex-direction: column; gap: 4px;
+            position: sticky; top: 57px; height: calc(100vh - 57px); overflow-y: auto;
+        }
+        .sidebar-label { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; padding: 8px 12px 4px; margin-top: 8px; }
+        .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; color: var(--text-muted); text-decoration: none; font-size: 0.88rem; font-weight: 500; transition: all 0.2s; }
+        .sidebar-link:hover, .sidebar-link.active { background: rgba(124,111,247,0.12); color: var(--text); }
+        .sidebar-link.active { color: var(--accent); }
+        .sidebar-link i { width: 18px; text-align: center; }
+        .main-content { flex: 1; padding: 28px; overflow-x: hidden; }
+
+        /* ── Cards ── */
+        .card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 14px; }
+        .card-header { background: transparent; border-bottom: 1px solid var(--border); padding: 16px 20px; font-weight: 600; }
+        .card-body { padding: 20px; }
+
+        /* ── Tables ── */
+        .table { color: var(--text); }
+        .table th { color: var(--text-muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; border-color: var(--border); padding: 12px 16px; }
+        .table td { border-color: var(--bg-tertiary); padding: 12px 16px; font-size: 0.9rem; vertical-align: middle; }
+        .table-hover tbody tr:hover td { background: rgba(124,111,247,0.05); }
+        .table-dark { --bs-table-bg: var(--bg-secondary); --bs-table-striped-bg: var(--bg-tertiary); --bs-table-hover-bg: rgba(124,111,247,0.08); }
+
+        /* ── Badges ── */
+        .badge { font-size: 0.75rem; font-weight: 600; padding: 4px 10px; }
+        .badge-present { background: rgba(63,185,80,0.15); color: var(--green); }
+        .badge-absent  { background: rgba(248,81,73,0.15);  color: var(--red); }
+        .badge-active   { background: rgba(63,185,80,0.15); color: var(--green); }
+        .badge-inactive { background: rgba(248,81,73,0.15); color: var(--red); }
+        .badge-suspended{ background: rgba(210,153,34,0.15);color: var(--yellow); }
+
+        /* ── Buttons ── */
+        .btn-accent { background: linear-gradient(135deg, var(--accent), #5b52e0); color: #fff; border: none; font-weight: 600; border-radius: 8px; }
+        .btn-accent:hover { color: #fff; transform: translateY(-1px); box-shadow: 0 5px 20px rgba(124,111,247,0.4); }
+        .btn-outline-accent { border: 1px solid var(--accent); color: var(--accent); border-radius: 8px; background: transparent; }
+        .btn-outline-accent:hover { background: var(--accent); color: #fff; }
+
+        /* ── Forms ── */
+        .form-control, .form-select {
+            background: var(--bg-primary); border: 1px solid var(--border); color: var(--text);
+            border-radius: 8px; padding: 10px 14px;
+        }
+        .form-control:focus, .form-select:focus { background: var(--bg-primary); color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,111,247,0.15); }
+        .form-label { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; }
+        .form-control::placeholder { color: #4a5568; }
+
+        /* ── Alerts (flash) ── */
+        .flash-messages { padding: 12px 24px 0; }
+        .alert { border-radius: 10px; border: none; font-size: 0.9rem; }
+        .alert-success { background: rgba(63,185,80,0.12); color: var(--green); }
+        .alert-danger  { background: rgba(248,81,73,0.12);  color: var(--red); }
+        .alert-warning { background: rgba(210,153,34,0.12); color: var(--yellow); }
+        .alert-info    { background: rgba(124,111,247,0.12);color: var(--accent-hover); }
+
+        /* ── Pct bar ── */
+        .pct-bar { height: 6px; background: var(--bg-tertiary); border-radius: 3px; overflow: hidden; min-width:60px; }
+        .pct-fill-green  { background: var(--green); height:100%; border-radius:3px; }
+        .pct-fill-yellow { background: var(--yellow); height:100%; border-radius:3px; }
+        .pct-fill-red    { background: var(--red); height:100%; border-radius:3px; }
+
+        /* ── Responsive sidebar hidden on mobile ── */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="app-nav">
+    <a href="/" class="nav-brand">🎓 Attend<span>Track</span></a>
+    <div class="nav-spacer"></div>
+    {% if session.user_id %}
+    <div class="nav-user">
+        <div class="nav-avatar">{{ session.user_name[0].upper() if session.user_name else 'U' }}</div>
+        <span style="color:var(--text-muted); font-size:0.85rem">{{ session.user_name }}</span>
+        <a href="/logout" class="nav-link-btn"><i class="fa fa-sign-out-alt"></i> Logout</a>
+    </div>
+    {% else %}
+    <a href="/login" class="nav-link-btn"><i class="fa fa-sign-in-alt"></i> Login</a>
+    {% endif %}
+</nav>
+
+<!-- Flash messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-messages">
+    {% for cat, msg in messages %}
+    <div class="alert alert-{{ cat }} alert-dismissible fade show" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- Layout -->
+<div class="app-layout">
+    {% if session.user_id %}
+    <aside class="sidebar">
+        {% if session.role == 'admin' %}
+        <div class="sidebar-label">Admin</div>
+        <a href="/admin/dashboard" class="sidebar-link {% if request.path == '/admin/dashboard' %}active{% endif %}"><i class="fa fa-tachometer-alt"></i> Dashboard</a>
+        <a href="/admin/students"  class="sidebar-link {% if '/admin/students' in request.path %}active{% endif %}"><i class="fa fa-users"></i> Students</a>
+        <a href="/admin/student/register" class="sidebar-link"><i class="fa fa-user-plus"></i> Register</a>
+        <a href="/admin/edit"      class="sidebar-link"><i class="fa fa-calendar-times"></i> Mark Absent</a>
+        <div class="sidebar-label">Reports</div>
+        <a href="/data"   class="sidebar-link"><i class="fa fa-table"></i> Today</a>
+        <a href="/whole"  class="sidebar-link"><i class="fa fa-database"></i> All Records</a>
+        <a href="/export/csv" class="sidebar-link"><i class="fa fa-download"></i> Export CSV</a>
+        <div class="sidebar-label">System</div>
+        <a href="/dashboard" class="sidebar-link"><i class="fa fa-chart-bar"></i> PowerBI</a>
+        {% else %}
+        <div class="sidebar-label">Student</div>
+        <a href="/student/dashboard" class="sidebar-link active"><i class="fa fa-chart-line"></i> My Dashboard</a>
+        <a href="/punch" class="sidebar-link"><i class="fa fa-camera"></i> Punch Attendance</a>
+        {% endif %}
+    </aside>
+    {% endif %}
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

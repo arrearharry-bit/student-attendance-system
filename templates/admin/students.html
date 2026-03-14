@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% block title %}Students | Admin{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 style="font-size:1.6rem; font-weight:700">Student Management</h1>
+    <a href="/admin/student/register" class="btn btn-accent"><i class="fa fa-user-plus me-2"></i>Register Student</a>
+</div>
+
+<!-- Stats row -->
+<div class="row g-3 mb-4">
+    <div class="col-SM-6 col-md-4">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--accent)">{{ students|length }}</div>
+            <div style="color:var(--text-muted); font-size:0.82rem">Total Students</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--green)">{{ students|selectattr('status','eq','active')|list|length }}</div>
+            <div style="color:var(--text-muted); font-size:0.82rem">Active</div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-4">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.8rem; font-weight:700; color:var(--yellow)">
+                {% if students %}{{ ((students|sum(attribute='pct')) / students|length)|round(1) }}%{% else %}0%{% endif %}
+            </div>
+            <div style="color:var(--text-muted); font-size:0.82rem">Avg Attendance</div>
+        </div>
+    </div>
+</div>
+
+<!-- Search / Filter -->
+<form class="d-flex gap-2 mb-3 flex-wrap" method="GET">
+    <input type="text" name="search" class="form-control" style="max-width:260px" placeholder="Search name or username…" value="{{ search }}">
+    <select name="status" class="form-select" style="max-width:160px">
+        <option value="">All Statuses</option>
+        <option value="active"    {% if status_filter=='active'    %}selected{% endif %}>Active</option>
+        <option value="inactive"  {% if status_filter=='inactive'  %}selected{% endif %}>Inactive</option>
+        <option value="suspended" {% if status_filter=='suspended' %}selected{% endif %}>Suspended</option>
+    </select>
+    <button class="btn btn-outline-accent" type="submit"><i class="fa fa-search"></i></button>
+</form>
+
+<!-- Table -->
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Student</th><th>Username</th><th>Status</th>
+                    <th>Total</th><th>Present</th><th>Absent</th><th>Attendance %</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td><strong>{{ s.name or s.username }}</strong><br><small style="color:var(--text-muted)">{{ s.email }}</small></td>
+                    <td>{{ s.username }}</td>
+                    <td><span class="badge badge-{{ s.status }}">{{ s.status|title }}</span></td>
+                    <td>{{ s.total }}</td>
+                    <td style="color:var(--green); font-weight:600">{{ s.present }}</td>
+                    <td style="color:var(--red); font-weight:600">{{ s.absent }}</td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="pct-bar" style="width:64px;">
+                                <div class="pct-fill-{% if s.pct>=90 %}green{% elif s.pct>=75 %}yellow{% else %}red{% endif %}" style="width:{{ s.pct }}%"></div>
+                            </div>
+                            <span style="color:{% if s.pct>=90 %}var(--green){% elif s.pct>=75 %}var(--yellow){% else %}var(--red){% endif %}; font-weight:600">{{ s.pct }}%</span>
+                        </div>
+                    </td>
+                    <td>
+                        <a href="/admin/student/{{ s.id }}" class="btn btn-sm btn-outline-accent me-1">View</a>
+                        <a href="/admin/student/{{ s.id }}/edit" class="btn btn-sm btn-outline-secondary">Edit</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="text-center py-5" style="color:var(--text-muted)">No students found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block title %}AttendTrack — Smart Attendance Management{% endblock %}
+{% block content %}
+<!-- Hero -->
+<section style="text-align:center; padding: 80px 20px 60px; background: radial-gradient(ellipse at top, rgba(124,111,247,0.12) 0%, transparent 70%);">
+    <div style="font-size:4rem; margin-bottom:16px;">🎓</div>
+    <h1 style="font-size:clamp(2rem,5vw,3.5rem); font-weight:800; margin-bottom:16px;">
+        Smart <span style="background:linear-gradient(135deg,#7c6ff7,#a89ffa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Attendance</span> Management
+    </h1>
+    <p style="color:var(--text-muted); font-size:1.15rem; max-width:540px; margin:0 auto 36px;">
+        AI-powered face recognition marks attendance automatically. Students track their stats, admins control everything.
+    </p>
+    <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
+        <a href="/punch" class="btn btn-accent btn-lg px-4"><i class="fa fa-camera me-2"></i>Punch Attendance</a>
+        <a href="/login" class="btn btn-outline-accent btn-lg px-4"><i class="fa fa-sign-in-alt me-2"></i>Login</a>
+    </div>
+</section>
+
+<!-- Stats bar -->
+<div style="display:flex; justify-content:center; gap:40px; padding:40px 20px; flex-wrap:wrap;">
+    <div style="text-align:center;">
+        <div style="font-size:2.5rem; font-weight:800; color:var(--accent)">{{ student_count }}</div>
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-top:4px">Registered Students</div>
+    </div>
+    <div style="width:1px; background:var(--border); align-self:stretch"></div>
+    <div style="text-align:center;">
+        <div style="font-size:2.5rem; font-weight:800; color:var(--green)">{{ today_count }}</div>
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-top:4px">Present Today</div>
+    </div>
+    <div style="width:1px; background:var(--border); align-self:stretch"></div>
+    <div style="text-align:center;">
+        <div style="font-size:2.5rem; font-weight:800; color:var(--yellow)">AI</div>
+        <div style="color:var(--text-muted); font-size:0.9rem; margin-top:4px">Face Recognition</div>
+    </div>
+</div>
+
+<!-- Feature cards -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px; max-width:900px; margin:0 auto; padding:0 20px 60px;">
+    <div class="card p-4">
+        <div style="font-size:2rem; margin-bottom:12px">📸</div>
+        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px">Face Recognition</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem">Open your camera and your attendance is marked instantly. No cards, no codes.</p>
+    </div>
+    <div class="card p-4">
+        <div style="font-size:2rem; margin-bottom:12px">📊</div>
+        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px">Student Dashboard</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem">Each student sees personalized attendance stats, charts, and low-attendance alerts.</p>
+    </div>
+    <div class="card p-4">
+        <div style="font-size:2rem; margin-bottom:12px">🛠️</div>
+        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px">Admin Control</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem">Admins manage students, edit attendance history, export reports, and monitor the system.</p>
+    </div>
+</div>
+{% endblock %}

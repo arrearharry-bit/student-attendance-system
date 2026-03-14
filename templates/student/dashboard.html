@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}My Attendance | {{ display_name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-1">
+    <div>
+        <div style="color:var(--text-muted);font-size:0.9rem">Welcome back,</div>
+        <h1 style="font-size:1.8rem;font-weight:800">{{ display_name }}</h1>
+    </div>
+    <a href="/punch" class="btn btn-accent"><i class="fa fa-camera me-2"></i>Punch Attendance</a>
+</div>
+
+<!-- Filter pills -->
+<div class="d-flex gap-2 mb-4 mt-3">
+    <a href="?filter=all"      class="btn btn-sm {% if filter_type=='all'      %}btn-accent{% else %}btn-outline-secondary{% endif %}">All Time</a>
+    <a href="?filter=month"    class="btn btn-sm {% if filter_type=='month'    %}btn-accent{% else %}btn-outline-secondary{% endif %}">This Month</a>
+    <a href="?filter=semester" class="btn btn-sm {% if filter_type=='semester' %}btn-accent{% else %}btn-outline-secondary{% endif %}">Semester</a>
+</div>
+
+{% if pct < 75 and total > 0 %}
+<div class="alert alert-danger d-flex gap-3 align-items-center mb-3">
+    <i class="fa fa-exclamation-triangle fa-lg"></i>
+    <div><strong>Low Attendance Alert!</strong> Your attendance is <strong>{{ pct }}%</strong>. Minimum required: 75%. Please attend more classes!</div>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card p-4 text-center"><div style="font-size:2.4rem;font-weight:800;color:var(--accent)">{{ total }}</div><div style="color:var(--text-muted);font-size:0.82rem;margin-top:4px"><i class="fa fa-calendar me-1"></i>Total Days</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-4 text-center"><div style="font-size:2.4rem;font-weight:800;color:var(--green)">{{ present }}</div><div style="color:var(--text-muted);font-size:0.82rem;margin-top:4px"><i class="fa fa-check-circle me-1"></i>Present</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-4 text-center"><div style="font-size:2.4rem;font-weight:800;color:var(--red)">{{ absent }}</div><div style="color:var(--text-muted);font-size:0.82rem;margin-top:4px"><i class="fa fa-times-circle me-1"></i>Absent</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-4 text-center">
+        <div style="font-size:2.4rem;font-weight:800;color:{% if pct>=90 %}var(--green){% elif pct>=75 %}var(--yellow){% else %}var(--red){% endif %}">{{ pct }}%</div>
+        <div style="color:var(--text-muted);font-size:0.82rem;margin-top:4px"><i class="fa fa-chart-pie me-1"></i>Attendance</div>
+    </div></div>
+</div>
+
+<!-- Charts -->
+<div class="row g-3 mb-4">
+    <div class="col-md-8"><div class="card"><div class="card-header"><i class="fa fa-chart-line me-2" style="color:var(--accent)"></i>Attendance Trend (Last 30 Days)</div><div class="card-body"><canvas id="trendChart" height="100"></canvas></div></div></div>
+    <div class="col-md-4"><div class="card h-100"><div class="card-header"><i class="fa fa-chart-pie me-2" style="color:var(--green)"></i>Breakdown</div><div class="card-body d-flex align-items-center justify-content-center"><canvas id="pieChart" height="200"></canvas></div></div></div>
+</div>
+
+<!-- Recent History -->
+<div class="card">
+    <div class="card-header">Recent Attendance History</div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead><tr><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>{{ r['Date'] }}</td>
+                    <td>{{ r['Time'] }}</td>
+                    <td><span class="badge badge-{{ r['STATUS']|lower }}">{{ r['STATUS'] }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" class="text-center py-5" style="color:var(--text-muted)">
+                    {% if total == 0 %}No attendance yet. Start attending classes!{% else %}No records in this range.{% endif %}
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+new Chart(document.getElementById('trendChart'), {
+    type:'line',
+    data:{
+        labels: {{ chart_labels|safe }},
+        datasets:[
+            {label:'Present', data:{{ chart_present|safe }}, borderColor:'#3fb950', backgroundColor:'rgba(63,185,80,0.1)', fill:true, tension:0.4, pointRadius:3},
+            {label:'Absent',  data:{{ chart_absent|safe }},  borderColor:'#f85149', backgroundColor:'rgba(248,81,73,0.1)',  fill:true, tension:0.4, pointRadius:3}
+        ]
+    },
+    options:{plugins:{legend:{labels:{color:'#e6edf3'}}},scales:{x:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,0.05)'}},y:{ticks:{color:'#8b949e'},grid:{color:'rgba(255,255,255,0.05)'},beginAtZero:true}}}
+});
+new Chart(document.getElementById('pieChart'), {
+    type:'doughnut',
+    data:{labels:['Present ({{ present }})','Absent ({{ absent }})'],
+        datasets:[{data:[{{ present }},{{ absent }}],backgroundColor:['#3fb950','#f85149'],borderWidth:0,hoverOffset:8}]},
+    options:{plugins:{legend:{labels:{color:'#e6edf3'},position:'bottom'}},cutout:'70%'}
+});
+</script>
+{% endblock %}
