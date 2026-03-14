@@ -8,16 +8,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/amlanmohanty1/face-recognition-attendance-management-system-with-PowerBI-dashboard.git"
+    "url": "git+https://github.com/arrearharry-bit/student-attendance-system.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
-    "url": "https://github.com/amlanmohanty1/face-recognition-attendance-management-system-with-PowerBI-dashboard/issues"
+    "url": "https://github.com/arrearharry-bit/student-attendance-system/issues"
   },
-  "homepage": "https://github.com/amlanmohanty1/face-recognition-attendance-management-system-with-PowerBI-dashboard#readme",
+  "homepage": "https://github.com/arrearharry-bit/student-attendance-system#readme",
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

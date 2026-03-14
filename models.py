@@ -130,7 +130,7 @@ def mark_present(name):
     """Insert a Present record if not already marked today."""
     today = str(date.today())
     from datetime import datetime
-    now_str = datetime.now().strftime('%H:%M')
+    now_str = datetime.now().strftime('%I:%M %p')
     with get_db() as conn:
         existing = conn.execute(
             "SELECT rowid FROM Attendance WHERE NAME=? AND Date=?", (name, today)
