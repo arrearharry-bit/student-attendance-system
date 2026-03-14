@@ -18,8 +18,8 @@ A professional, full-stack attendance management system using Flask, OpenCV, and
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/amlanmohanty1/face-recognition-attendance-management-system-with-PowerBI-dashboard.git
-   cd face-recognition-attendance-management-system-with-PowerBI-dashboard
+   git clone https://github.com/arrearharry-bit/student-attendance-system
+   cd student-attendance-system
    ```
 
 2. **Set up Virtual Environment**:
