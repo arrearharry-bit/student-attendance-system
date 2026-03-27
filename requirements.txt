@@ -7,4 +7,5 @@ pyOpenSSL
 python-dotenv
 pillow
 werkzeug
-sqlite3
+opencv-contrib-python
+cmake

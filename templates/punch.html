@@ -1,44 +1,56 @@
 {% extends 'base.html' %}
-{% block title %}Punch Attendance{% endblock %}
+{% block title %}Neural Punch | AttendTrack{% endblock %}
 {% block extra_css %}
 <style>
-.video-container { position:relative; border-radius:16px; overflow:hidden; max-width:640px; margin:0 auto; background:#000; border:2px solid var(--border); }
-#webcam { width:100%; display:block; }
-.video-overlay { position:absolute; inset:0; pointer-events:none; }
-.corner { position:absolute; width:24px; height:24px; border-color:var(--accent); border-style:solid; }
-.corner-tl { top:16px;  left:16px;  border-width:3px 0 0 3px; }
-.corner-tr { top:16px;  right:16px; border-width:3px 3px 0 0; }
-.corner-bl { bottom:16px; left:16px;  border-width:0 0 3px 3px; }
-.corner-br { bottom:16px; right:16px; border-width:0 3px 3px 0; }
+.video-wrapper { position:relative; border-radius:24px; overflow:hidden; max-width:720px; margin:0 auto; background:#000; box-shadow: 0 20px 50px rgba(0,0,0,0.7); border: 2px solid var(--border); }
+#webcam { width:100%; display:block; filter: saturate(1.1) brightness(1.05); }
+.scanner-overlay { position:absolute; inset:0; pointer-events:none; }
+.scanning-line { position:absolute; top:0; left:0; width:100%; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); animation: scan 3s linear infinite; box-shadow: 0 0 15px var(--accent); opacity: 0.6; }
+@keyframes scan { 0% { top: 0%; } 50% { top: 100%; } 100% { top: 0%; } }
+
+.corner-border { position:absolute; width:40px; height:40px; border-color:var(--accent); border-style:solid; opacity: 0.6; }
+.corner-tl { top:20px;  left:20px;  border-width:4px 0 0 4px; border-top-left-radius: 12px; }
+.corner-tr { top:20px;  right:20px; border-width:4px 4px 0 0; border-top-right-radius: 12px; }
+.corner-bl { bottom:20px; left:20px;  border-width:0 0 4px 4px; border-bottom-left-radius: 12px; }
+.corner-br { bottom:20px; right:20px; border-width:0 4px 4px 0; border-bottom-right-radius: 12px; }
+
+.status-glow { font-size: 1.1rem; font-weight: 700; color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); animation: pulse-status 2s infinite; }
+@keyframes pulse-status { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 </style>
 {% endblock %}
 {% block content %}
-<div style="max-width:700px; margin:0 auto;">
-    <h1 style="font-size:1.8rem; font-weight:700; margin-bottom:6px"><i class="fa fa-camera" style="color:var(--accent)"></i> Punch Your Attendance</h1>
-    <p style="color:var(--text-muted); margin-bottom:24px">Position your face in the frame. Recognition happens automatically.</p>
+<div class="text-center" style="max-width:800px; margin:0 auto;">
+    <div class="mb-5">
+        <h1 style="font-size:2.2rem; font-weight:900; letter-spacing:-1px">Neural Recognition</h1>
+        <p class="text-muted" style="font-size:1.1rem">Align your face with the scanner for cryptographic verification</p>
+    </div>
 
-    <div class="video-container mb-4">
+    <div class="video-wrapper mb-5">
         <video id="webcam" autoplay muted playsinline></video>
-        <div class="video-overlay">
-            <div class="corner corner-tl"></div>
-            <div class="corner corner-tr"></div>
-            <div class="corner corner-bl"></div>
-            <div class="corner corner-br"></div>
+        <div class="scanner-overlay">
+            <div class="scanning-line"></div>
+            <div class="corner-border corner-tl"></div>
+            <div class="corner-border corner-tr"></div>
+            <div class="corner-border corner-bl"></div>
+            <div class="corner-border corner-br"></div>
         </div>
     </div>
 
-    <div id="recog-status" style="text-align:center; font-size:1rem; font-weight:600; min-height:28px; margin-bottom:16px; color:var(--text-muted)">Camera not started.</div>
-
-    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-        <button id="start-camera" class="btn btn-accent px-4"><i class="fa fa-globe me-2"></i>Browser Camera</button>
-        <a href="/recognize_local" class="btn btn-outline-accent px-4"><i class="fa fa-desktop me-2"></i>Local Camera (High Accuracy)</a>
-        <button id="stop-camera" class="btn btn-outline-danger px-4"><i class="fa fa-stop me-2"></i>Stop</button>
+    <div class="mb-5">
+        <div id="recog-status" class="status-glow mb-4">INITIALIZING SYSTEM...</div>
+        
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            <button id="start-camera" class="btn btn-accent px-5 py-3"><i class="fa fa-shuttle-space me-2"></i>Start Neural Link</button>
+            <a href="/recognize_local" class="btn btn-outline-accent px-5 py-3"><i class="fa fa-terminal me-2"></i>Native Engine (High Acc)</a>
+            <button id="stop-camera" class="btn btn-outline-danger px-4 py-3"><i class="fa fa-power-off"></i></button>
+        </div>
     </div>
 
-    <div class="card mt-4" style="background:rgba(124,111,247,0.06);">
-        <div class="card-body" style="font-size:0.88rem; color:var(--text-muted);">
-            <strong style="color:var(--text)">How it works:</strong>
-            1. Click "Start Camera" → 2. Position face in the frame → 3. Wait for automatic recognition → 4. See your name confirmed ✅
+    <div class="card p-4 border-0" style="background:rgba(255,255,255,0.02)">
+        <div class="card-body py-1 d-flex align-items-center justify-content-center gap-4 text-muted small">
+            <span><i class="fa fa-shield-check me-2 text-success"></i>Liveness Detection active</span>
+            <div style="width:1px; height:20px; background:var(--border)"></div>
+            <span><i class="fa fa-user-check me-2 text-accent"></i>Automated mark-in</span>
         </div>
     </div>
 </div>

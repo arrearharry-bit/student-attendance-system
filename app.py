@@ -14,17 +14,19 @@ import numpy as np
 from datetime import date, datetime, timedelta
 from functools import wraps
 from dotenv import load_dotenv # Added dotenv import
+import time # Added for camera slowing
 
 load_dotenv() # Call load_dotenv()
 
 from models import (init_db, get_db, get_user_by_username, get_user_by_id,
                     create_user, update_user, get_all_students, search_students,
                     mark_present, get_today_attendance, get_all_attendance,
-                    update_attendance_status, get_student_stats, log_audit, get_audit_logs)
+                    update_attendance_status, get_student_stats, log_audit, get_audit_logs,
+                    auto_mark_absent_for_today)
 from face_utils import (recognize_frame, encode_all_images, get_encodings, 
                         load_encodings, encode_single_image)
 import cv2
-import face_recognition
+# import face_recognition (Removed for stability)
 
 # ─── App setup ────────────────────────────────────────────────────────────────
 
@@ -130,44 +132,38 @@ def punch():
 @app.route('/recognize_local')
 @login_required
 def recognize_local():
-    """Restored 'Old Way': Opens a local OpenCV window for the highest accuracy."""
+    """Optimized 'Old Way': Opens a local OpenCV window using the LBPH recognizer."""
     video_capture = cv2.VideoCapture(0)
     
-    encode_list, class_names = get_encodings()
-    if not encode_list:
-        flash("No faces encoded! Add students with photos first.", "danger")
-        return redirect(url_for('admin_dashboard'))
-
+    # Ensure encodings are loaded
+    load_encodings()
+    
     flash("Local Camera Started. Press 'q' to close the window.", "info")
+    
+    frame_count = 0
+    current_results = []
     
     while True:
         ret, frame = video_capture.read()
         if not ret: break
+        
+        # Processing delay to slow the camera rate as requested
+        time.sleep(0.05)
+        frame_count += 1
+        
+        # Only perform heavy recognition every 8th frame for maximum stability
+        if frame_count % 8 == 0:
+            # Recognition using OpenCV LBPH
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            current_results = recognize_frame(rgb_frame)
 
-        # Resize for faster processing (now 50% for better accuracy)
-        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
-        rgb_small_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-
-        for face_encoding, face_location in zip(face_encodings, face_locations):
-            face_distances = face_recognition.face_distance(encode_list, face_encoding)
-            best_match_index = np.argmin(face_distances)
-            dist = float(face_distances[best_match_index])
+        for (name, dist, (top, right, bottom, left)) in current_results:
+            color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
             
-            # HUD details
-            name = class_names[best_match_index].upper() if dist < 0.6 else "UNKNOWN"
-            color = (0, 255, 0) if dist < 0.6 else (0, 0, 255)
-            
-            # Mark attendance in DB if match is good
-            if dist < 0.6:
-                if mark_present(name):
-                    print(f"MATCH: {name} - Marked Present (dist: {dist:.3f})")
+            if name != "Unknown":
+                mark_present(name)
             
             # Draw box & Label
-            top, right, bottom, left = face_location
-            top, right, bottom, left = top*2, right*2, bottom*2, left*2
             cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
             cv2.rectangle(frame, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
             label = f"{name} ({dist:.2f})"
@@ -180,6 +176,8 @@ def recognize_local():
     video_capture.release()
     cv2.destroyAllWindows()
     return redirect(url_for('home'))
+
+
 
 @app.route('/recognize_ajax', methods=['POST'])
 def recognize_ajax():
@@ -199,16 +197,17 @@ def recognize_ajax():
             return jsonify({'success': False, 'message': 'Cannot decode image'})
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        name, confidence = recognize_frame(rgb_frame)
+        results = recognize_frame(rgb_frame)
 
-        if name == 'Unknown' or confidence < 0.35:
+        if not results or results[0][0] == 'Unknown':
             return jsonify({'success': True, 'name': 'Unknown', 'confidence': 0})
 
+        name, dist, _ = results[0]
         already = not mark_present(name)
         return jsonify({
             'success': True,
             'name': name.title(),
-            'confidence': confidence,
+            'confidence': round(1 - dist, 2),
             'already_marked': already
         })
     except Exception as e:
@@ -227,6 +226,9 @@ def student_dashboard():
     username = session['username']
     user = get_user_by_id(session['user_id'])
     display_name = (user['name'] or username).upper()
+
+    # Ensure daily absent status is marked
+    auto_mark_absent_for_today()
 
     filter_type = request.args.get('filter', 'all')
     today = date.today()
@@ -268,6 +270,9 @@ def student_dashboard():
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
+    # Ensure daily absent status is marked for all students
+    auto_mark_absent_for_today()
+    
     students = get_all_students()
     today_rows = get_today_attendance()
     audit_logs = get_audit_logs(20)
@@ -373,10 +378,12 @@ def admin_register_student():
                     filename = secure_filename(f"{name or username}.png")
                     save_path = os.path.join(TRAINING_PATH, filename)
                     photo.save(save_path)
-                    encode_single_image(save_path, name or username)
-                    flash(f'Student {name} registered and face encoded!', 'success')
+                    if encode_single_image(save_path, name or username):
+                        flash(f'Student {name} registered and face encoded!', 'success')
+                    else:
+                        flash(f'Student {name} registered, but FACE DETECTION FAILED. Please upload a clearer photo to enable recognition.', 'warning')
                 else:
-                    flash(f'Student {name} registered. Upload a photo to enable face recognition.', 'info')
+                    flash(f'Student {name} registered. Upload a photo later to enable face recognition.', 'info')
                 return redirect(url_for('admin_students'))
             except Exception as e:
                 error = str(e)
@@ -385,11 +392,11 @@ def admin_register_student():
 @app.route('/admin/attendance/edit', methods=['POST'])
 @admin_required
 def admin_attendance_edit():
-    rowid   = request.form.get('rowid')
+    id      = request.form.get('id')
     status  = request.form.get('status')
     sid     = request.form.get('student_id')
-    update_attendance_status(rowid, status)
-    log_audit(session['username'], 'EDIT_ATTENDANCE', f'rowid={rowid}', f'status={status}')
+    update_attendance_status(id, status)
+    log_audit(session['username'], 'EDIT_ATTENDANCE', f'id={id}', f'status={status}')
     return redirect(url_for('admin_student_detail', sid=sid))
 
 @app.route('/admin/edit', methods=['GET'])
@@ -399,10 +406,20 @@ def admin_edit():
     with get_db() as conn:
         present_today = [r['NAME'].upper() for r in
             conn.execute("SELECT NAME FROM Attendance WHERE Date=?", (today,)).fetchall()]
-    from face_utils import get_encodings
-    _, class_names = get_encodings()
-    not_marked = [n for n in class_names if n.upper() not in present_today]
-    return render_template('admin_edit.html', students=not_marked)
+        all_students = conn.execute(
+            "SELECT name, username FROM Users WHERE role='student' AND status='active'"
+        ).fetchall()
+
+    student_status = []
+    for s in all_students:
+        display_name = (s['name'] or s['username']).strip()
+        is_present = display_name.upper() in present_today
+        student_status.append({
+            'name': display_name,
+            'is_present': is_present
+        })
+
+    return render_template('admin_edit.html', students=student_status)
 
 @app.route('/admin/mark_absent', methods=['POST'])
 @admin_required
@@ -446,20 +463,62 @@ def whole():
 def export_csv():
     import pandas as pd
     rows = get_all_attendance()
-    data = [{'Name': r['NAME'], 'Time': r['Time'], 'Date': r['Date'], 'Status': r['STATUS']} for r in rows]
+    data = [{'Date': str(r['Date']), 'Name': r['NAME'], 'Time': r['Time'], 'Status': r['STATUS']} for r in rows]
     df = pd.DataFrame(data)
-    output = io.BytesIO()
-    df.to_csv(output, index=False)
-    output.seek(0)
-    return send_file(output, mimetype='text/csv',
+    
+    # Explicitly ensure column order and fix encoding for Excel
+    if not df.empty:
+        df = df[['Date', 'Name', 'Time', 'Status']]
+    
+    output = io.StringIO() # Use StringIO for text-based CSV
+    df.to_csv(output, index=False, encoding='utf-8-sig')
+    
+    buf = io.BytesIO()
+    buf.write(output.getvalue().encode('utf-8-sig'))
+    buf.seek(0)
+    
+    return send_file(buf, mimetype='text/csv',
                      as_attachment=True, download_name='attendance_report.csv')
 
-# ─── PowerBI Integration ───────────────────────────────────────────────────────
+# ─── Live Analytics (PowerBI Replacement) ──────────────────────────────────────
 
 @app.route('/dashboard')
 @admin_required
 def dashboard():
-    return render_template('dashboard.html')
+    """Live Analytics Dashboard (replaces external PowerBI iframe)."""
+    # 1. Weekly stats
+    labels, present_counts, absent_counts = [], [], []
+    for i in range(6, -1, -1):
+        d = str(date.today() - timedelta(days=i))
+        labels.append(d)
+        with get_db() as conn:
+            p = conn.execute("SELECT COUNT(*) FROM Attendance WHERE Date=? AND STATUS='Present'", (d,)).fetchone()[0]
+            a = conn.execute("SELECT COUNT(*) FROM Attendance WHERE Date=? AND STATUS='Absent'", (d,)).fetchone()[0]
+        present_counts.append(p)
+        absent_counts.append(a)
+
+    # 2. Overall distribution
+    with get_db() as conn:
+        total_p = conn.execute("SELECT COUNT(*) FROM Attendance WHERE STATUS='Present'").fetchone()[0]
+        total_a = conn.execute("SELECT COUNT(*) FROM Attendance WHERE STATUS='Absent'").fetchone()[0]
+    
+    # 3. Student performance (top 10)
+    students = get_all_students()
+    perf = []
+    for s in students:
+        sname = (s['name'] or s['username']).upper()
+        total, pre, abs_, pct, _ = get_student_stats(sname)
+        if total > 0:
+            perf.append({'name': sname, 'pct': pct})
+    
+    perf = sorted(perf, key=lambda x: x['pct'], reverse=True)[:10]
+
+    return render_template('dashboard.html',
+                           labels=json.dumps(labels),
+                           present_counts=json.dumps(present_counts),
+                           absent_counts=json.dumps(absent_counts),
+                           total_p=total_p, total_a=total_a,
+                           perf=perf)
 
 # ─── Error Handlers ───────────────────────────────────────────────────────────
 
@@ -480,4 +539,4 @@ if __name__ == '__main__':
     host = os.getenv('HOST', '0.0.0.0')
     port = int(os.getenv('PORT', 5000))
     debug = os.getenv('DEBUG', 'True').lower() == 'true'
-    app.run(debug=debug, host=host, port=port, ssl_context='adhoc')
+    app.run(debug=debug, host=host, port=port)

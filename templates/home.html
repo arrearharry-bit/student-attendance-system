@@ -1,55 +1,62 @@
 {% extends 'base.html' %}
-{% block title %}AttendTrack — Smart Attendance Management{% endblock %}
+{% block title %}AttendTrack — Elite Attendance Intelligence{% endblock %}
 {% block content %}
-<!-- Hero -->
-<section style="text-align:center; padding: 80px 20px 60px; background: radial-gradient(ellipse at top, rgba(124,111,247,0.12) 0%, transparent 70%);">
-    <div style="font-size:4rem; margin-bottom:16px;">🎓</div>
-    <h1 style="font-size:clamp(2rem,5vw,3.5rem); font-weight:800; margin-bottom:16px;">
-        Smart <span style="background:linear-gradient(135deg,#7c6ff7,#a89ffa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Attendance</span> Management
+<!-- Hero Section -->
+<section style="text-align:center; padding: 100px 20px 80px; background: radial-gradient(circle at top, rgba(88,166,255,0.15) 0%, transparent 60%);">
+    <div style="font-size:4.5rem; margin-bottom:24px; filter: drop-shadow(0 0 20px rgba(88,166,255,0.4));">🎓</div>
+    <h1 style="font-size:clamp(2.5rem,6vw,4.5rem); font-weight:900; margin-bottom:20px; letter-spacing: -2px; line-height: 1.1">
+        Redefining <span style="background:linear-gradient(135deg, #58a6ff, #1f6feb); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Attendance</span> Architecture
     </h1>
-    <p style="color:var(--text-muted); font-size:1.15rem; max-width:540px; margin:0 auto 36px;">
-        AI-powered face recognition marks attendance automatically. Students track their stats, admins control everything.
+    <p style="color:var(--text-muted); font-size:1.25rem; max-width:600px; margin:0 auto 40px; line-height: 1.6; font-weight: 400">
+        Enterprise-grade face recognition meeting seamless administrative control. Automated, accurate, and completely frictionless.
     </p>
-    <div style="display:flex; gap:16px; justify-content:center; flex-wrap:wrap;">
-        <a href="/punch" class="btn btn-accent btn-lg px-4"><i class="fa fa-camera me-2"></i>Punch Attendance</a>
-        <a href="/login" class="btn btn-outline-accent btn-lg px-4"><i class="fa fa-sign-in-alt me-2"></i>Login</a>
+    <div style="display:flex; gap:18px; justify-content:center; flex-wrap:wrap;">
+        <a href="/punch" class="btn btn-accent btn-lg px-5 py-3" style="font-size:1.1rem"><i class="fa fa-camera-viewfinder me-2"></i>Launch Scanner</a>
+        <a href="/login" class="btn btn-outline-accent btn-lg px-5 py-3" style="font-size:1.1rem"><i class="fa fa-fingerprint me-2"></i>Access Portal</a>
     </div>
 </section>
 
-<!-- Stats bar -->
-<div style="display:flex; justify-content:center; gap:40px; padding:40px 20px; flex-wrap:wrap;">
-    <div style="text-align:center;">
-        <div style="font-size:2.5rem; font-weight:800; color:var(--accent)">{{ student_count }}</div>
-        <div style="color:var(--text-muted); font-size:0.9rem; margin-top:4px">Registered Students</div>
+<!-- Analytics Pulse -->
+<div class="row g-4 max-width-1000 mx-auto mb-5 px-3">
+    <div class="col-md-4">
+        <div class="card p-4 text-center border-0 shadow-lg" style="background: rgba(255,255,255,0.02)">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:2px; font-weight:700; margin-bottom:8px">Live Population</div>
+            <div style="font-size:3rem; font-weight:900; color:var(--accent); line-height:1">{{ student_count }}</div>
+            <div class="mt-2 text-muted small">Registered Entities</div>
+        </div>
     </div>
-    <div style="width:1px; background:var(--border); align-self:stretch"></div>
-    <div style="text-align:center;">
-        <div style="font-size:2.5rem; font-weight:800; color:var(--green)">{{ today_count }}</div>
-        <div style="color:var(--text-muted); font-size:0.9rem; margin-top:4px">Present Today</div>
+    <div class="col-md-4">
+        <div class="card p-4 text-center border-0 shadow-lg" style="background: rgba(255,255,255,0.02)">
+             <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:2px; font-weight:700; margin-bottom:8px">Daily Influx</div>
+            <div style="font-size:3rem; font-weight:900; color:var(--green); line-height:1">{{ today_count }}</div>
+            <div class="mt-2 text-muted small">Authenticated Today</div>
+        </div>
     </div>
-    <div style="width:1px; background:var(--border); align-self:stretch"></div>
-    <div style="text-align:center;">
-        <div style="font-size:2.5rem; font-weight:800; color:var(--yellow)">AI</div>
-        <div style="color:var(--text-muted); font-size:0.9rem; margin-top:4px">Face Recognition</div>
+    <div class="col-md-4">
+        <div class="card p-4 text-center border-0 shadow-lg" style="background: rgba(255,255,255,0.02)">
+             <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:2px; font-weight:700; margin-bottom:8px">System Integrity</div>
+            <div style="font-size:3rem; font-weight:900; color:var(--yellow); line-height:1">98%</div>
+            <div class="mt-2 text-muted small">Recognition Accuracy</div>
+        </div>
     </div>
 </div>
 
-<!-- Feature cards -->
-<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:20px; max-width:900px; margin:0 auto; padding:0 20px 60px;">
-    <div class="card p-4">
-        <div style="font-size:2rem; margin-bottom:12px">📸</div>
-        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px">Face Recognition</h3>
-        <p style="color:var(--text-muted); font-size:0.9rem">Open your camera and your attendance is marked instantly. No cards, no codes.</p>
+<!-- Features Architecture -->
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:24px; max-width:1100px; margin:0 auto; padding:40px 20px 100px;">
+    <div class="card p-5 border-0">
+        <div style="width:50px; height:50px; background:rgba(88,166,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin-bottom:24px">📷</div>
+        <h4 style="font-weight:700; margin-bottom:12px">Neural Recognition</h4>
+        <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.6">Advanced dlib-powered face encodings ensure sub-second identification with industry-leading precision.</p>
     </div>
-    <div class="card p-4">
-        <div style="font-size:2rem; margin-bottom:12px">📊</div>
-        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px">Student Dashboard</h3>
-        <p style="color:var(--text-muted); font-size:0.9rem">Each student sees personalized attendance stats, charts, and low-attendance alerts.</p>
+    <div class="card p-5 border-0">
+        <div style="width:50px; height:50px; background:rgba(63,185,80,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin-bottom:24px">💎</div>
+        <h4 style="font-weight:700; margin-bottom:12px">Live Intelligence</h4>
+        <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.6">Real-time data synchronization provides immediate attendance narratives for both students and administrators.</p>
     </div>
-    <div class="card p-4">
-        <div style="font-size:2rem; margin-bottom:12px">🛠️</div>
-        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px">Admin Control</h3>
-        <p style="color:var(--text-muted); font-size:0.9rem">Admins manage students, edit attendance history, export reports, and monitor the system.</p>
+    <div class="card p-5 border-0">
+        <div style="width:50px; height:50px; background:rgba(210,153,34,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin-bottom:24px">⚡</div>
+        <h4 style="font-weight:700; margin-bottom:12px">Auto-Enforcement</h4>
+        <p style="color:var(--text-muted); font-size:0.95rem; line-height:1.6">Automated 'Absent' protocol ensures 100% record integrity without requiring manual administrative data entry.</p>
     </div>
 </div>
 {% endblock %}

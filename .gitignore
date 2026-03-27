@@ -21,8 +21,11 @@ venv.bak/
 *.sqlite3
 information.db*
 
-# Face Encodings (Will be dynamically generated locally)
-encodings.pickle
+# Generated Assets
+attendance.csv
+*.pickle
+*.xml
+!haarcascade_frontalface_default.xml
 
 # Training Images (User-specific data)
 Training images/*
@@ -33,6 +36,10 @@ Training images/*
 .idea/
 *.swp
 *.swo
+
+# Node.js
+node_modules/
+package-lock.json
 
 # OS generated files
 .DS_Store

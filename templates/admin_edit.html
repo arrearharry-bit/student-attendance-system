@@ -23,9 +23,17 @@
             <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
                 {% if students %}
                     {% for student in students %}
-                    <div class="student-item">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="absent_students" value="{{ student }}"> {{ student }}
+                    <div class="student-item" {% if student.is_present %}style="background-color: #f0fff0; opacity: 0.8;"{% endif %}>
+                        <label class="checkbox-label" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <input type="checkbox" name="absent_students" value="{{ student.name }}" {% if student.is_present %}disabled{% endif %}>
+                                <span style="{% if student.is_present %}color: #28a745; font-weight: bold;{% endif %}">{{ student.name }}</span>
+                            </div>
+                            {% if student.is_present %}
+                                <span class="label label-success">Already Present</span>
+                            {% else %}
+                                <span class="label label-warning">Not Marked</span>
+                            {% endif %}
                         </label>
                     </div>
                     {% endfor %}

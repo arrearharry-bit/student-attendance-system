@@ -119,7 +119,7 @@
                     <td class="status-{{ r['STATUS']|lower }}">{{ r['STATUS'] }}</td>
                     <td>
                         <form method="POST" action="/admin/attendance/edit" style="display:inline-flex; gap:6px;">
-                            <input type="hidden" name="rowid" value="{{ r['rowid'] }}">
+                            <input type="hidden" name="id" value="{{ r['id'] }}">
                             <input type="hidden" name="student_id" value="{{ student['id'] }}">
                             <select class="inline-edit" name="status">
                                 <option value="Present" {% if r['STATUS']=='Present' %}selected{% endif %}>Present</option>

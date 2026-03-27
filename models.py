@@ -127,21 +127,71 @@ def search_students(query='', status=''):
 # ─── Attendance helpers ───────────────────────────────────────────────────────
 
 def mark_present(name):
-    """Insert a Present record if not already marked today."""
+    """Insert a Present record if not already marked today. Also updates CSV."""
     today = str(date.today())
     from datetime import datetime
     now_str = datetime.now().strftime('%I:%M %p')
+    
+    # 1. Update SQLite
+    newly_marked = False
     with get_db() as conn:
         existing = conn.execute(
-            "SELECT rowid FROM Attendance WHERE NAME=? AND Date=?", (name, today)
+            "SELECT id, STATUS FROM Attendance WHERE NAME=? AND Date=?", (name.upper(), today)
         ).fetchone()
+        
         if not existing:
             conn.execute(
                 "INSERT INTO Attendance (NAME, Time, Date, STATUS) VALUES (?,?,?,?)",
                 (name.upper(), now_str, today, 'Present')
             )
-            return True  # newly marked
-    return False  # already marked
+            newly_marked = True
+        elif existing['STATUS'] == 'Absent':
+            conn.execute(
+                "UPDATE Attendance SET STATUS='Present', Time=? WHERE id=?",
+                (now_str, existing['id'])
+            )
+            newly_marked = True
+
+    # 2. Update attendance.csv (Enhanced to include Date/Status)
+    try:
+        csv_file = 'attendance.csv'
+        header = 'Name,Time,Date,Status\n'
+        if not os.path.exists(csv_file):
+            with open(csv_file, 'w') as f:
+                f.write(header)
+                
+        with open(csv_file, 'a', errors='ignore') as f:
+            f.write(f'{name.upper()},{now_str},{today},Present\n')
+    except Exception as e:
+        print(f"CSV Logging Error: {e}")
+        
+    return newly_marked
+
+def auto_mark_absent_for_today():
+    """
+    Finds all students who are NOT in the Attendance table for today
+    and marks them as 'Absent'.
+    """
+    today = str(date.today())
+    with get_db() as conn:
+        # Get all active students
+        students = conn.execute("SELECT name, username FROM Users WHERE role='student' AND status='active'").fetchall()
+        
+        # Get names already in Attendance for today
+        marked_names = [r['NAME'].upper() for r in 
+                        conn.execute("SELECT NAME FROM Attendance WHERE Date=?", (today,)).fetchall()]
+        
+        from datetime import datetime
+        now_str = datetime.now().strftime('%I:%M %p')
+        
+        for s in students:
+            sname = (s['name'] or s['username']).upper()
+            if sname not in marked_names:
+                conn.execute(
+                    "INSERT INTO Attendance (NAME, Time, Date, STATUS, notes) VALUES (?,?,?,?,?)",
+                    (sname, now_str, today, 'Absent', 'Auto-marked')
+                )
+
 
 def get_today_attendance():
     today = str(date.today())
@@ -152,7 +202,7 @@ def get_today_attendance():
 
 def get_all_attendance(name=None, from_date=None, to_date=None):
     with get_db() as conn:
-        sql = "SELECT rowid, * FROM Attendance WHERE 1=1"
+        sql = "SELECT * FROM Attendance WHERE 1=1"
         params = []
         if name:
             sql += " AND UPPER(NAME)=?"
@@ -166,9 +216,9 @@ def get_all_attendance(name=None, from_date=None, to_date=None):
         sql += " ORDER BY Date DESC, Time DESC"
         return conn.execute(sql, params).fetchall()
 
-def update_attendance_status(rowid, new_status):
+def update_attendance_status(id, new_status):
     with get_db() as conn:
-        conn.execute("UPDATE Attendance SET STATUS=? WHERE rowid=?", (new_status, rowid))
+        conn.execute("UPDATE Attendance SET STATUS=? WHERE id=?", (new_status, id))
 
 def get_student_stats(display_name, from_date=None):
     records = get_all_attendance(name=display_name, from_date=from_date)

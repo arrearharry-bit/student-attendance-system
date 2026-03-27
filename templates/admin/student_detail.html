@@ -60,7 +60,7 @@
                     <td><span class="badge badge-{{ r['STATUS']|lower }}">{{ r['STATUS'] }}</span></td>
                     <td>
                         <form method="POST" action="/admin/attendance/edit" class="d-flex gap-2 align-items-center">
-                            <input type="hidden" name="rowid" value="{{ r['rowid'] }}">
+                            <input type="hidden" name="id" value="{{ r['id'] }}">
                             <input type="hidden" name="student_id" value="{{ student['id'] }}">
                             <select name="status" class="form-select form-select-sm" style="max-width:140px">
                                 <option value="Present"  {% if r['STATUS']=='Present'  %}selected{% endif %}>Present</option>

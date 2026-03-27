@@ -11,30 +11,59 @@ A professional, full-stack attendance management system using Flask, OpenCV, and
   - **Admin**: Manage students, view audit logs, edit attendance, and view global stats.
   - **Student**: View personal attendance history and performance dashboards.
 - **Enhanced Accuracy**: Encodings generated with 10x Jittering and 50% recognition resolution.
-- **Modern UI**: Dark-themed, responsive dashboard built with Bootstrap 5 and Chart.js.
+- **Modern UI**: Dark-themed, responsive dashboard built with Bootstrap 5
+## Getting Started
+
+Follow these steps to set up and run the system locally:
+
+### 1. Prerequisites
+- Python 3.8+
+- [Cmake](https://cmake.org/download/) (required for `dlib`/`face-recognition` libraries)
+
+### 2. Installation
+1.  **Clone the repository**:
+    ```bash
+    git clone https://github.com/arrearharry-bit/student-attendance-system.git
+    cd student-attendance-system
+    ```
+2.  **Create a Virtual Environment**:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+    ```
+3.  **Install Dependencies**:
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### 3. Configuration
+1.  Copy `.env.example` to `.env`:
+    ```bash
+    cp .env.example .env
+    ```
+2.  Open `.env` and customize your `SECRET_KEY`.
+
+### 4. Database Setup
+Initialize the SQLite database:
+```bash
+python init_db.py
+```
+
+### 5. Running the App
+Start the Flask server:
+```bash
+python app.py
+```
+Access the application at `http://localhost:5000`.
+
+## Features
+- **Face Recognition**: LBPH-based recognition for high reliability.
+- **Admin Dashboard**: Manage students, view logs, and export reports.
+- **Student Dashboard**: Individual attendance history and performance charts.
+- **CSV Export**: Export all attendance data to a clean CSV format.
+ and Chart.js.
 - **Production Ready**: Support for environment variables (`.env`), HTTPS (adhoc SSL), and custom error handling.
 
-## 🛠️ Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/arrearharry-bit/student-attendance-system
-   cd student-attendance-system
-   ```
-
-2. **Set up Virtual Environment**:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   ```
-
-3. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Configuration**:
-   Create a `.env` file in the root directory:
    ```env
    SECRET_KEY=your_secure_random_key
    FLASK_ENV=development
