@@ -7,9 +7,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        (function() {
+            var savedTheme = localStorage.getItem('theme');
+            if (!savedTheme) {
+                savedTheme = 'dark'; // default
+            }
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
     {% block extra_css %}{% endblock %}
     <style>
         :root {
+            --sidebar-width: 260px;
+        }
+        html[data-theme="dark"] {
             --bg-primary: #0a0c10;
             --bg-secondary: #0d1117;
             --bg-tertiary: #161b22;
@@ -21,9 +33,23 @@
             --green: #3fb950;
             --red: #f85149;
             --yellow: #d29922;
-            --sidebar-width: 260px;
             --card-shadow: 0 8px 24px rgba(0,0,0,0.5);
             --glass: rgba(13, 17, 23, 0.7);
+        }
+        html[data-theme="light"] {
+            --bg-primary: #f6f8fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f3f4f6;
+            --border: rgba(27, 31, 36, 0.15);
+            --text: #1f2328;
+            --text-muted: #656d76;
+            --accent: #0969da;
+            --accent-glow: rgba(9, 105, 218, 0.3);
+            --green: #1a7f37;
+            --red: #cf222e;
+            --yellow: #9a6700;
+            --card-shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+            --glass: rgba(255, 255, 255, 0.85);
         }
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', sans-serif; background: var(--bg-primary); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
@@ -81,6 +107,9 @@
         .btn-accent:hover { color: #fff; box-shadow: 0 0 20px var(--accent-glow); transform: scale(1.02); }
         .btn-outline-accent { border: 1px solid var(--accent); color: var(--accent); border-radius: 10px; background: transparent; padding: 10px 20px; transition: all 0.3s; }
         .btn-outline-accent:hover { background: var(--accent); color: #fff; }
+        
+        .nav-link-btn.btn-theme { padding: 8px; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 10px; background: var(--bg-tertiary); }
+        html[data-theme="light"] .nav-link-btn.btn-theme { background: var(--bg-tertiary); color: var(--text); border: 1px solid var(--border); }
 
         /* ── Forms ── */
         .form-control, .form-select {
@@ -104,6 +133,9 @@
 <nav class="app-nav">
     <a href="/" class="nav-brand">🎓 Attend<span>Track</span></a>
     <div class="nav-spacer"></div>
+    <button id="theme-toggle" class="nav-link-btn btn-theme" title="Toggle Theme" style="border:none; cursor:pointer;">
+        <i class="fa fa-sun" id="theme-icon"></i>
+    </button>
     {% if session.user_id %}
     <div class="nav-user">
         <div class="nav-avatar">{{ session.user_name[0].upper() if session.user_name else 'U' }}</div>
@@ -159,6 +191,30 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const themeToggle = document.getElementById('theme-toggle');
+    const htmlEl = document.documentElement;
+    const themeIcon = document.getElementById('theme-icon');
+
+    function updateIcon(theme) {
+        if (theme === 'dark') {
+            themeIcon.className = 'fa fa-sun';
+        } else {
+            themeIcon.className = 'fa fa-moon';
+        }
+    }
+
+    // Set initial icon based on the current active theme
+    updateIcon(htmlEl.getAttribute('data-theme') || 'dark');
+
+    themeToggle.addEventListener('click', () => {
+        const currentTheme = htmlEl.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        htmlEl.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateIcon(newTheme);
+    });
+</script>
 {% block extra_js %}{% endblock %}
 </body>
 </html>
