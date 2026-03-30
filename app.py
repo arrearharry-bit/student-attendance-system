@@ -3,36 +3,38 @@ app.py – Main Flask application.
 Clean, modular entry point. All routes organized cleanly.
 Run:   python init_db.py   (first time)
 Then:  python app.py
+
+NOTE: face_utils.py is from main branch.
+      recognize_frame() returns (name: str, confidence: float) — a 2-tuple.
 """
 from flask import (Flask, render_template, request, session,
                    redirect, url_for, jsonify, send_file, flash)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 import os, io, json, base64
-import sqlite3 # Added sqlite3 import
+import sqlite3
 import numpy as np
 from datetime import date, datetime, timedelta
 from functools import wraps
-from dotenv import load_dotenv # Added dotenv import
-import time # Added for camera slowing
+from dotenv import load_dotenv
+import time
 
-load_dotenv() # Call load_dotenv()
+load_dotenv()
 
 from models import (init_db, get_db, get_user_by_username, get_user_by_id,
                     create_user, update_user, get_all_students, search_students,
                     mark_present, get_today_attendance, get_all_attendance,
                     update_attendance_status, get_student_stats, log_audit, get_audit_logs,
                     auto_mark_absent_for_today)
-from face_utils import (recognize_frame, encode_all_images, get_encodings, 
-                        load_encodings, encode_single_image)
+from face_utils import (recognize_frame, encode_all_images, get_encodings,
+                        load_encodings, encode_single_image, is_face_present)
 import cv2
-# import face_recognition (Removed for stability)
 
 # ─── App setup ────────────────────────────────────────────────────────────────
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'default-dev-key') # Updated secret key loading
-app.config['ENV'] = os.getenv('FLASK_ENV', 'development') # Added FLASK_ENV config
+app.secret_key = os.getenv('SECRET_KEY', 'default-dev-key')
+app.config['ENV'] = os.getenv('FLASK_ENV', 'development')
 
 TRAINING_PATH = 'Training images'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -92,7 +94,6 @@ def login():
         user = get_user_by_username(username)
         if user and user['status'] == 'active':
             pw = user['password']
-            # Support both old SHA-256 and new Werkzeug format
             import hashlib
             valid = (check_password_hash(pw, password) if pw.startswith('pbkdf2:') or pw.startswith('scrypt:')
                      else pw == hashlib.sha256(password.encode()).hexdigest())
@@ -113,7 +114,6 @@ def logout():
     flash(f'Goodbye, {name}!', 'info')
     return redirect(url_for('home'))
 
-# Backward compat
 @app.route('/how')
 def how():
     return redirect(url_for('login'))
@@ -123,6 +123,8 @@ def checklogin():
     return session.get('username', 'False')
 
 # ─── Webcam / Face Recognition ────────────────────────────────────────────────
+# CHANGED: recognize_frame() from main's face_utils returns (name, confidence) — 2-tuple
+# REMOVED: sruthi's 3-tuple list unpacking [(name, dist, location), ...]
 
 @app.route('/punch')
 def punch():
@@ -132,42 +134,49 @@ def punch():
 @app.route('/recognize_local')
 @login_required
 def recognize_local():
-    """Optimized 'Old Way': Opens a local OpenCV window using the LBPH recognizer."""
+    """Local OpenCV window — uses main's face_utils (dlib deep learning).
+    Kept sruthi's frame-skipping (every 8th) and time.sleep for camera stability.
+    """
     video_capture = cv2.VideoCapture(0)
-    
-    # Ensure encodings are loaded
+
     load_encodings()
-    
+
+    encode_list, class_names = get_encodings()
+    if not encode_list:
+        flash("No faces encoded! Add students with photos first.", "danger")
+        return redirect(url_for('admin_dashboard'))
+
     flash("Local Camera Started. Press 'q' to close the window.", "info")
-    
+
     frame_count = 0
-    current_results = []
-    
+    last_name = None
+    last_confidence = 0.0
+
     while True:
         ret, frame = video_capture.read()
-        if not ret: break
-        
-        # Processing delay to slow the camera rate as requested
+        if not ret:
+            break
+
+        # Kept from sruthi: camera stability improvement
         time.sleep(0.05)
         frame_count += 1
-        
-        # Only perform heavy recognition every 8th frame for maximum stability
-        if frame_count % 8 == 0:
-            # Recognition using OpenCV LBPH
-            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            current_results = recognize_frame(rgb_frame)
 
-        for (name, dist, (top, right, bottom, left)) in current_results:
-            color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
-            
-            if name != "Unknown":
-                mark_present(name)
-            
-            # Draw box & Label
-            cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
-            cv2.rectangle(frame, (left, bottom - 35), (right, bottom), color, cv2.FILLED)
-            label = f"{name} ({dist:.2f})"
-            cv2.putText(frame, label, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.6, (255, 255, 255), 1)
+        # Kept from sruthi: only process every 8th frame
+        if frame_count % 8 == 0:
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            # CHANGED: main's recognize_frame returns (name, confidence) — simple 2-tuple
+            last_name, last_confidence = recognize_frame(rgb_frame)
+
+            if last_name and last_name != 'Unknown':
+                mark_present(last_name)
+
+        # Draw cached result on every frame
+        if last_name:
+            color = (0, 255, 0) if last_name != 'Unknown' else (0, 0, 255)
+            label = f"{last_name.upper()} ({last_confidence:.2f})"
+            cv2.putText(frame, label, (20, 40),
+                        cv2.FONT_HERSHEY_DUPLEX, 0.8, color, 2)
 
         cv2.imshow('Face Recognition (Press Q to Quit)', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -178,7 +187,6 @@ def recognize_local():
     return redirect(url_for('home'))
 
 
-
 @app.route('/recognize_ajax', methods=['POST'])
 def recognize_ajax():
     """AJAX endpoint: receives base64 image, returns recognition result."""
@@ -187,33 +195,34 @@ def recognize_ajax():
         if not data or 'image' not in data:
             return jsonify({'success': False, 'message': 'No image provided'})
 
-        img_b64 = data['image'].split(',')[-1]  # strip data:image/... prefix
+        img_b64 = data['image'].split(',')[-1]
         img_bytes = base64.b64decode(img_b64)
         img_array = np.frombuffer(img_bytes, dtype=np.uint8)
 
-        import cv2
         frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
         if frame is None:
             return jsonify({'success': False, 'message': 'Cannot decode image'})
 
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        results = recognize_frame(rgb_frame)
 
-        if not results or results[0][0] == 'Unknown':
+        # CHANGED: main's recognize_frame returns (name, confidence) directly
+        # sruthi had: name, dist, _ = results[0]  ← that was wrong for main's face_utils
+        name, confidence = recognize_frame(rgb_frame)
+
+        if name == 'Unknown' or confidence < 0.35:
             return jsonify({'success': True, 'name': 'Unknown', 'confidence': 0})
 
-        name, dist, _ = results[0]
         already = not mark_present(name)
         return jsonify({
             'success': True,
             'name': name.title(),
-            'confidence': round(1 - dist, 2),
+            'confidence': confidence,
             'already_marked': already
         })
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 
-# Legacy streaming route (keep for backward compat)
+# Legacy route
 @app.route('/recognize', methods=['GET', 'POST'])
 def recognize():
     return redirect(url_for('punch'))
@@ -227,7 +236,6 @@ def student_dashboard():
     user = get_user_by_id(session['user_id'])
     display_name = (user['name'] or username).upper()
 
-    # Ensure daily absent status is marked
     auto_mark_absent_for_today()
 
     filter_type = request.args.get('filter', 'all')
@@ -241,17 +249,15 @@ def student_dashboard():
 
     total, present, absent, pct, records = get_student_stats(display_name, from_date)
 
-    # Chart data
     daily = {}
     for r in records:
         d = str(r['Date'])
         if d not in daily:
             daily[d] = {'Present': 0, 'Absent': 0}
-        
         status_key = r['STATUS']
         if status_key in daily[d]:
             daily[d][status_key] += 1
-            
+
     recent_dates = sorted(daily.keys())
     chart_labels = recent_dates[-30:] if len(recent_dates) > 30 else recent_dates
     chart_present = [daily[d].get('Present', 0) for d in chart_labels]
@@ -270,9 +276,8 @@ def student_dashboard():
 @app.route('/admin/dashboard')
 @admin_required
 def admin_dashboard():
-    # Ensure daily absent status is marked for all students
     auto_mark_absent_for_today()
-    
+
     students = get_all_students()
     today_rows = get_today_attendance()
     audit_logs = get_audit_logs(20)
@@ -281,7 +286,6 @@ def admin_dashboard():
     today_present = len([r for r in today_rows if r['STATUS'] == 'Present'])
     attendance_rate = round((today_present / total_students * 100), 1) if total_students else 0
 
-    # Weekly trend – last 7 days
     trend_labels, trend_counts = [], []
     for i in range(6, -1, -1):
         d = str(date.today() - timedelta(days=i))
@@ -369,24 +373,33 @@ def admin_register_student():
 
         if not username or not password:
             error = 'Username and password are required.'
+        elif not photo or not allowed_file(photo.filename):
+            error = 'A photo is required for student registration.'
         else:
             try:
-                create_user(username, generate_password_hash(password), name, email, 'student')
-                log_audit(session['username'], 'REGISTER_STUDENT', username)
-                # Handle photo upload
-                if photo and allowed_file(photo.filename):
-                    filename = secure_filename(f"{name or username}.png")
-                    save_path = os.path.join(TRAINING_PATH, filename)
-                    photo.save(save_path)
+                filename = secure_filename(f"{name or username}.png")
+                save_path = os.path.join(TRAINING_PATH, filename)
+                photo.save(save_path)
+
+                if is_face_present(save_path):
+                    # Create user only after face is detected
+                    create_user(username, generate_password_hash(password), name, email, 'student')
+                    log_audit(session['username'], 'REGISTER_STUDENT', username)
+
                     if encode_single_image(save_path, name or username):
                         flash(f'Student {name} registered and face encoded!', 'success')
                     else:
-                        flash(f'Student {name} registered, but FACE DETECTION FAILED. Please upload a clearer photo to enable recognition.', 'warning')
+                        flash(f'Student {name} registered, but face encoding failed. Try a clearer photo.', 'warning')
+                    return redirect(url_for('admin_students'))
                 else:
-                    flash(f'Student {name} registered. Upload a photo later to enable face recognition.', 'info')
-                return redirect(url_for('admin_students'))
+                    # Clean up the photo if no face detected
+                    if os.path.exists(save_path):
+                        os.remove(save_path)
+                    error = 'FACE DETECTION FAILED! Please upload a clearer photo. Student was NOT registered.'
             except Exception as e:
                 error = str(e)
+                if 'save_path' in locals() and os.path.exists(save_path):
+                    os.remove(save_path)
     return render_template('admin/register_student.html', error=error)
 
 @app.route('/admin/attendance/edit', methods=['POST'])
@@ -465,28 +478,25 @@ def export_csv():
     rows = get_all_attendance()
     data = [{'Date': str(r['Date']), 'Name': r['NAME'], 'Time': r['Time'], 'Status': r['STATUS']} for r in rows]
     df = pd.DataFrame(data)
-    
-    # Explicitly ensure column order and fix encoding for Excel
+
     if not df.empty:
         df = df[['Date', 'Name', 'Time', 'Status']]
-    
-    output = io.StringIO() # Use StringIO for text-based CSV
+
+    output = io.StringIO()
     df.to_csv(output, index=False, encoding='utf-8-sig')
-    
+
     buf = io.BytesIO()
     buf.write(output.getvalue().encode('utf-8-sig'))
     buf.seek(0)
-    
+
     return send_file(buf, mimetype='text/csv',
                      as_attachment=True, download_name='attendance_report.csv')
 
-# ─── Live Analytics (PowerBI Replacement) ──────────────────────────────────────
+# ─── Live Analytics Dashboard ─────────────────────────────────────────────────
 
 @app.route('/dashboard')
 @admin_required
 def dashboard():
-    """Live Analytics Dashboard (replaces external PowerBI iframe)."""
-    # 1. Weekly stats
     labels, present_counts, absent_counts = [], [], []
     for i in range(6, -1, -1):
         d = str(date.today() - timedelta(days=i))
@@ -497,12 +507,10 @@ def dashboard():
         present_counts.append(p)
         absent_counts.append(a)
 
-    # 2. Overall distribution
     with get_db() as conn:
         total_p = conn.execute("SELECT COUNT(*) FROM Attendance WHERE STATUS='Present'").fetchone()[0]
         total_a = conn.execute("SELECT COUNT(*) FROM Attendance WHERE STATUS='Absent'").fetchone()[0]
-    
-    # 3. Student performance (top 10)
+
     students = get_all_students()
     perf = []
     for s in students:
@@ -510,7 +518,7 @@ def dashboard():
         total, pre, abs_, pct, _ = get_student_stats(sname)
         if total > 0:
             perf.append({'name': sname, 'pct': pct})
-    
+
     perf = sorted(perf, key=lambda x: x['pct'], reverse=True)[:10]
 
     return render_template('dashboard.html',
